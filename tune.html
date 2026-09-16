@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Garment Rig Tuner · AOE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=TikTok+Sans:opsz,wdth,wght@12..36,75..100,300..900&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <header class="bar">
+    <span class="brand">Garment Rig Tuner</span>
+    <select id="pick"></select>
+    <span class="sp"></span>
+    <label class="chk"><input type="checkbox" id="mirror" checked /> mirror L/R</label>
+    <label class="chk"><input type="checkbox" id="showRig" checked /> rig on body</label>
+    <label class="chk"><input type="checkbox" id="showPose" /> pose</label>
+    <label class="chk" title="Whole garment follows position + torso rotation + uniform scale by shoulder width — never stretched non-uniformly, no per-limb warp"><input type="checkbox" id="rigid" /> rigid (no stretch)</label>
+    <span class="sp"></span>
+    <span id="topOnly" class="grp" hidden>
+      <button id="seamAdd" type="button" title="Add the sleeve/body cut (red). Double-click the line to add a point; right-click a handle to remove one.">+ Seam</button>
+      <button id="pinAdd" type="button" title="Pin the hem to the torso (blue). ⌥-click the flat image to drop a pair anywhere; right-click a pin to remove it.">+ Pin</button>
+      <button id="seamClear" type="button" title="Remove the cut and all pins from this garment">Clear</button>
+    </span>
+    <button id="reset" type="button">Revert</button>
+    <button id="save" type="button" class="primary">Save to manifest</button>
+    <span id="status" class="status"></span>
+  </header>
+
+  <main class="grid">
+    <section class="pane">
+      <h2>Flat · drag the joints</h2>
+      <div class="flatWrap">
+        <img id="flat" alt="" />
+        <canvas id="flatCv"></canvas>
+      </div>
+      <p class="hint" id="hint">Each dot is where the wearer's joint sits inside this garment — not where the seam is.</p>
+    </section>
+
+    <section class="pane">
+      <h2>On body · live</h2>
+      <div class="bodyWrap" id="bodyWrap">
+        <img id="bg" alt="" />
+        <canvas id="meshCv"></canvas>
+        <canvas id="overlayCv"></canvas>
+      </div>
+    </section>
+  </main>
+
+  <footer class="params">
+    <label>widthEase <input type="range" id="widthEase" min="0.6" max="1.6" step="0.01" /><output id="widthEaseV"></output></label>
+    <label>lengthEase <input type="range" id="lengthEase" min="0.6" max="1.6" step="0.01" /><output id="lengthEaseV"></output></label>
+    <label>offsetY <input type="range" id="offsetY" min="-0.3" max="0.3" step="0.01" /><output id="offsetYV"></output></label>
+    <label>torsoBias <input type="range" id="torsoBias" min="0.5" max="5" step="0.1" /><output id="torsoBiasV"></output></label>
+    <label>falloff <input type="range" id="falloff" min="1" max="6" step="0.1" /><output id="falloffV"></output></label>
+    <label>grid <input type="range" id="grid" min="8" max="40" step="2" /><output id="gridV"></output></label>
+    <label class="top-only">seam cut <input type="range" id="seamPenalty" min="1" max="12" step="0.5" /><output id="seamPenaltyV"></output></label>
+    <label class="top-only">pin size <input type="range" id="pinRadius" min="0" max="0.3" step="0.005" /><output id="pinRadiusV"></output></label>
+  </footer>
+
+  <script type="module" src="/src/tune.ts"></script>
+</body>
+</html>

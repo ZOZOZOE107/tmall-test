@@ -1,0 +1,98 @@
+/* ═══════════════════════════════════════════════════════════════════
+   产品设计系统 token —— Figma「AOE / Tokens」集合的代码镜像。
+
+   ⚠️ Figma 是唯一来源。改颜色改 Figma，不要改这个文件。
+      这里的值是从 Figma 回读同步下来的。
+
+   命名规则（机械对应，不留例外）：
+       Figma  a/b/c        ↔  CSS  --a-b-c
+       color/desk-paper    ↔  --color-desk-paper
+       color/persona/editor ↔ --color-persona-editor
+       space/16            ↔  --space-16
+   ═══════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── color ───────────────────────────────────────────────────── */
+  --color-accent: #f2521f;
+  --color-bg: #ede8e0;
+  --color-border: #2e2e38;
+  --color-checkbox-border: #767676;
+  --color-cut-white: #ffffff;
+  --color-cut-shadow: rgba(0, 0, 0, 0.18);
+  --color-desk-paper: #ede8e0;
+  --color-desk-void: #101014;
+  --color-folder-blue: #829f22;
+  --color-ink: #1a1a1a;
+  --color-ink-50: rgba(26, 26, 26, 0.5);
+  --color-surface: #9191d8;
+  --color-text: #e5e5eb;
+  --color-text-muted: #85858f;
+  --color-tmall-red: #ff0036;
+
+  /* ── color / persona · 四人格辅助色 ───────────────────────────── */
+  --color-persona-intellect: #2f4858; /* 高智知识分子 */
+  --color-persona-editor: #d94f70; /* 时髦混搭编辑 */
+  --color-persona-homebody: #c9a87c; /* 长期主义生活家 */
+  --color-persona-outdoor: #5b8c5a; /* 轻户外练习生 */
+
+  /*
+   * 同色相的高饱和版本，给进度环这种要在画面上跳出来的地方用。
+   * 原色是标签圆点那种「桌面图标」的稳重感，压在实拍画面上转圈会看不清。
+   * 保持色相不变，只把饱和度和明度拉上去 —— 这四个是新加的，Figma 里还没有。
+   */
+  --color-persona-intellect-vivid: #1782cf; /* hsl(205, 80%, 45%) */
+  --color-persona-editor-vivid: #ef396a; /* hsl(344, 85%, 58%) */
+  --color-persona-homebody-vivid: #f49725; /* hsl(33, 90%, 55%) */
+  --color-persona-outdoor-vivid: #25b620; /* hsl(118, 70%, 42%) */
+
+  /* ── space · 按实际像素命名 ──────────────────────────────────── */
+  --space-2: 2px;
+  --space-4: 4px;
+  --space-8: 8px;
+  --space-12: 12px;
+  --space-16: 16px;
+  --space-24: 24px;
+  --space-32: 32px;
+  --space-48: 48px;
+  --space-64: 64px;
+
+  /* ── radius ──────────────────────────────────────────────────── */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 999px; /* CSS 专有，Figma 里没有对应变量 */
+
+  /* ── font ────────────────────────────────────────────────────── */
+  --font-xs: 12px;
+  --font-sm: 14px;
+  --font-md: 18px;
+  --font-lg: 24px;
+  --font-xl: 40px;
+  --font-2xl: 72px;
+
+  /* ── motion ──────────────────────────────────────────────────── */
+  --motion-micro: 120ms;
+  --motion-fast: 160ms;
+  --motion-base: 240ms;
+  --motion-slow: 320ms;
+  --motion-transition: 400ms;
+  --motion-scene: 800ms;
+  --motion-easing: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* ── font-family ─────────────────────────────────────────────── */
+  /* Figma 里存的是单个字体名（那边只有 Noto Sans SC 可用）。
+     浏览器要 fallback，所以这里是字体栈，首选项和 Figma 保持一致。 */
+  --font-family: 'TikTok Sans', -apple-system, system-ui, sans-serif;
+  --font-family-mono: 'TikTok Sans', -apple-system, system-ui, sans-serif;
+
+  /* ── 以下是 CSS 专有，Figma 里没有对应变量 ───────────────────── */
+
+  /* 纸娃娃描边规格 */
+  --stroke-cut-drag: 2px; /* 拖拽态：白色虚线 */
+  --stroke-cut-fixed: 6px; /* 固定态：白色实描边 */
+  --stroke-cut-dash: 10px;
+  --stroke-cut-gap: 6px;
+
+  /* 尺寸档乘数，stage.ts 运行时覆盖：compact .85 / regular 1 / large 1.15 */
+  --tier: 1;
+}

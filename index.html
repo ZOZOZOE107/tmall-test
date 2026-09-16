@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <title>Four Seasons Wool · Dress-up</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=TikTok+Sans:opsz,wdth,wght@12..36,75..100,300..900&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <div id="viewport">
+    <!-- Stage = the video rectangle itself. Body-anchored elements live here. -->
+    <div id="stage">
+      <video id="src-video" playsinline muted autoplay></video>
+      <img id="src-image" alt="" hidden />
+      <canvas id="segmentation" hidden></canvas>
+      <canvas id="overlay"></canvas>
+      <!-- Desk props (wardrobe folders). Same coordinate system as the skeleton. -->
+      <div id="props"></div>
+    </div>
+
+    <p id="boot-hint">Open the panel on the left to pick a source</p>
+
+    <aside id="dev-panel" class="is-closed">
+      <svg class="handle-filter" aria-hidden="true" width="0" height="0">
+        <defs>
+          <filter id="handle-remove-white" color-interpolation-filters="sRGB">
+            <feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -0.3333 -0.3333 -0.3333 1 0" />
+          </filter>
+        </defs>
+      </svg>
+      <button id="dev-handle" type="button" aria-label="Toggle panel" aria-expanded="false">
+        <img src="/assets/handle-logo-closed.png" alt="" aria-hidden="true" />
+      </button>
+
+      <div class="dev-body">
+        <!-- Input -->
+        <section class="dev-sec">
+          <img class="sec-icon" src="/assets/icon-vrpano.svg" alt="" width="17" height="17" />
+          <div class="dev-row">
+            <select id="dev-device"><option value="__off__">OFF</option></select>
+            <button id="dev-refresh" type="button" class="icon-btn" title="Re-scan devices">
+              <img src="/assets/icon-refresh.svg" alt="" width="14" height="14" />
+            </button>
+          </div>
+          <select id="dev-res">
+            <option value="native" selected>Not cut</option>
+            <option value="auto">Auto</option>
+            <optgroup label="Landscape">
+              <option value="640x360">640 × 360</option>
+              <option value="1280x720">1280 × 720</option>
+              <option value="1920x1080">1920 × 1080</option>
+            </optgroup>
+            <optgroup label="Portrait">
+              <option value="360x640">360 × 640</option>
+              <option value="720x1280">720 × 1280</option>
+              <option value="1080x1920">1080 × 1920</option>
+            </optgroup>
+          </select>
+          <div class="btn-row">
+            <button id="dev-file-video" type="button" class="icon-btn" title="Local video">
+              <img src="/assets/icon-video.svg" alt="" width="14" height="14" />
+            </button>
+            <button id="dev-file-image" type="button" class="icon-btn" title="Local image">
+              <img src="/assets/icon-image.svg" alt="" width="14" height="14" />
+            </button>
+            <button id="dev-screen" type="button" class="icon-btn" title="Screen capture">
+              <img src="/assets/icon-screen.svg" alt="" width="14" height="14" />
+            </button>
+            <button id="dev-stop" type="button" class="icon-btn is-danger" title="Stop">
+              <img src="/assets/icon-stop.svg" alt="" width="14" height="14" />
+            </button>
+          </div>
+          <input id="dev-file-input" type="file" accept="video/*,image/*" hidden />
+        </section>
+
+        <!-- View -->
+        <section class="dev-sec">
+          <label class="dev-check"><input type="checkbox" id="dev-mirror" /><span>Mirror</span></label>
+          <label class="dev-check"><input type="checkbox" id="dev-cover" /><span>Cover</span></label>
+          <select id="dev-rotate">
+            <option value="0" selected>0 °</option>
+            <option value="90">90 °</option>
+            <option value="180">180 °</option>
+            <option value="270">270 °</option>
+          </select>
+        </section>
+
+        <!-- Tracking -->
+        <section class="dev-sec">
+          <img class="sec-icon" src="/assets/icon-checkroom.svg" alt="" width="19" height="18" />
+          <label class="dev-check"><input type="checkbox" id="dev-pose" /><span>UI</span></label>
+          <label class="dev-check"><input type="checkbox" id="dev-index" /><span>NO.</span></label>
+          <div class="dev-row">
+            <select id="dev-model">
+              <option value="lite" selected>lite</option>
+              <option value="full">full</option>
+              <option value="heavy">heavy</option>
+            </select>
+            <select id="dev-delegate">
+              <option value="GPU" selected>GPU</option>
+              <option value="CPU">CPU</option>
+            </select>
+          </div>
+          <div class="dev-slider">
+            <input type="range" id="dev-vis" min="0" max="0.9" step="0.05" value="0.5" />
+            <output id="dev-vis-val">0.50</output>
+          </div>
+          <label class="dev-check"><input type="checkbox" id="dev-hand" /><span>Hand</span></label>
+          <label class="dev-check"><input type="checkbox" id="dev-segmentation" /><span>Cutout</span></label>
+          <label class="dev-check"><input type="checkbox" id="dev-cloud-rain" checked /><span>Cloud Rain</span></label>
+          <label class="dev-check"><span>Cloud height</span></label>
+          <div class="dev-slider">
+            <input type="range" id="dev-cloud-height" min="-16" max="10" step="1" value="-8" />
+            <output id="dev-cloud-height-val">-8%</output>
+          </div>
+          <label class="dev-check"><span>Cloud size</span></label>
+          <div class="dev-slider">
+            <input type="range" id="dev-cloud-size" min="70" max="150" step="5" value="100" />
+            <output id="dev-cloud-size-val">100%</output>
+          </div>
+          <label class="dev-check"><input type="checkbox" id="dev-hand-ui" /><span>Hand UI</span></label>
+          <label class="dev-check"><input type="checkbox" id="dev-gesture" checked /><span>Point</span></label>
+          <div class="dev-row">
+            <select id="dev-hand-num">
+              <option value="1">One</option>
+              <option value="2" selected>Both</option>
+            </select>
+            <select id="dev-hand-delegate">
+              <option value="GPU" selected>GPU</option>
+              <option value="CPU">CPU</option>
+            </select>
+          </div>
+        </section>
+
+        <!-- Performance -->
+        <section class="dev-sec">
+          <img class="sec-icon" src="/assets/icon-apps.svg" alt="" width="18" height="18" />
+          <select id="dev-infer-res">
+            <option value="0">Size full</option>
+            <option value="720">Size 720</option>
+            <option value="640" selected>Size 640</option>
+            <option value="480">Size 480</option>
+            <option value="360">Size 360</option>
+          </select>
+          <select id="dev-hand-every">
+            <option value="1">gap 0 F</option>
+            <option value="2" selected>gap 1 F</option>
+            <option value="3">gap 2 F</option>
+            <option value="4">gap 3 F</option>
+          </select>
+        </section>
+
+        <!-- Stats -->
+        <section class="dev-stat">
+          <div><span>FPS</span><b id="stat-fps">—</b></div>
+          <div><span>pose</span><b id="stat-infer">—</b></div>
+          <div><span>hand</span><b id="stat-infer-hand">—</b></div>
+        </section>
+
+        <!-- Extra diagnostics, hidden by default. Press V to reveal. -->
+        <section class="dev-stat is-verbose">
+          <div><span>devices</span><b id="stat-devices">—</b></div>
+          <div><span>state</span><b id="stat-state">idle</b></div>
+          <div><span>source</span><b id="stat-source">—</b></div>
+          <div><span>native</span><b id="stat-src">—</b></div>
+          <div><span>track</span><b id="stat-track">—</b></div>
+          <div><span>infer in</span><b id="stat-infer-size">—</b></div>
+          <div><span>stage</span><b id="stat-stage">—</b></div>
+          <div><span>env</span><b id="stat-env">—</b></div>
+          <div><span>hands</span><b id="stat-hands">—</b></div>
+          <div><span>device</span><b id="dev-device-badge">desktop</b></div>
+          <p class="dev-note" id="dev-device-note">Processed on-device only. Nothing is recorded or uploaded.</p>
+        </section>
+
+        <p class="dev-footer">©2025 Aoe Studio<br />© Tmall Super Category Day</p>
+      </div>
+    </aside>
+  </div>
+
+  <script src="https://mcp.figma.com/mcp/html-to-design/capture.js" async></script>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

@@ -1,0 +1,354 @@
+@import './tokens.css';
+@import './dev-tokens.css';
+@import './folder.css';
+
+/* 这个文件里不应该出现任何字面量颜色和魔法数字。改值一律改 Figma → 同步 token。 */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-bg);
+  font-family: var(--font-family);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── 视口：Fit Best 之后剩下的留边区域 ─────────────────────────── */
+#viewport {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-bg);
+}
+
+/* ── 舞台：视频矩形本体。所有人体锚定元素挂在这里 ─────────────────── */
+#stage {
+  position: absolute;
+  left: 0; top: 0;
+  width: 0; height: 0;
+  transform-origin: center center;
+  will-change: transform, width, height;
+}
+/* 旋转和镜像由 stage.ts 统一写成 inline transform，避免两边打架 */
+
+#src-video,
+#src-image,
+#segmentation,
+#overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+#src-video, #src-image { object-fit: fill; } /* 舞台已是正确比例，这里不再二次适配 */
+
+/* 桌面道具层：只有道具自己接鼠标，空白处不挡住舞台 */
+#props {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+/*
+ * 开摄像头时舞台会整体 scaleX(-1) 做自拍镜像，道具层在舞台里面，会被一起翻过去 ——
+ * 文件夹的字全是反的。这里再翻一次抵消掉。
+ * 翻回来之后道具层的坐标系就等于「观众看到的」坐标系，所以喂给它的鼠标位置和
+ * 指尖位置也都要按这个来（见 main.ts 的 toProps / tip）。
+ */
+#stage[data-mirrored='1'] #props { transform: scaleX(-1); }
+#src-video[hidden], #src-image[hidden], #segmentation[hidden] { display: none; }
+#overlay { pointer-events: none; }
+
+#boot-hint {
+  position: absolute;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: var(--dev-font-sm);
+  letter-spacing: var(--dev-letter-spacing-wide);
+  color: var(--color-text-muted);
+  pointer-events: none;
+  transition: opacity var(--motion-base) var(--motion-easing);
+}
+#boot-hint.is-hidden { opacity: 0; }
+
+/* ═══ 开发工具栏 ═══════════════════════════════════════════════
+   正式皮肤上线后这一整段连同 dev-tokens.css 一起删掉。
+   ═══════════════════════════════════════════════════════════ */
+
+#dev-panel {
+  position: absolute;
+  left: 0; top: 0;
+  width: var(--dev-size-panel-width);
+  height: 100%;
+  transform: translateX(0);
+  transition: transform var(--motion-base) var(--motion-easing);
+  z-index: 100;
+}
+#dev-panel.is-closed { transform: translateX(-100%); }
+.handle-filter { position: absolute; width: 0; height: 0; }
+
+/* 面板本体：Figma 的 GLASS(74) + NOISE(25%) + 红色径向辉光三层叠加。
+   GLASS 浏览器没有等价物，用 backdrop-filter 逼近。 */
+.dev-body {
+  position: relative;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: clip;
+  padding:
+    var(--dev-size-body-padding-top)
+    var(--dev-size-body-padding-right)
+    var(--dev-size-body-padding-bottom)
+    var(--dev-size-body-padding-left);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+  border-radius: 0 var(--dev-radius-panel) var(--dev-radius-panel) 0;
+  background-image:
+    linear-gradient(90deg, var(--dev-surface-panel-tint), var(--dev-surface-panel-tint)),
+    var(--dev-glow),
+    linear-gradient(90deg, var(--dev-surface-panel), var(--dev-surface-panel));
+  backdrop-filter: blur(var(--dev-size-glass-blur)) saturate(1.4);
+  -webkit-backdrop-filter: blur(var(--dev-size-glass-blur)) saturate(1.4);
+}
+/* NOISE 叠加层 */
+.dev-body::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: var(--dev-noise);
+  background-repeat: repeat;
+  border-radius: inherit;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+}
+.dev-body > * { position: relative; }
+
+.dev-body::-webkit-scrollbar { width: var(--dev-size-scrollbar); }
+.dev-body::-webkit-scrollbar-thumb {
+  background: var(--dev-border-strong);
+  border-radius: var(--dev-radius-md);
+}
+
+/* ── 天猫入口：只保留猫头，透明把手板和发光层均不显示 ─────────── */
+#dev-handle {
+  position: absolute;
+  left: 100%;
+  top: calc(50% - 32px);
+  width: var(--dev-size-handle-width);
+  height: var(--dev-size-handle-closed-height);
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+#dev-handle img {
+  position: absolute;
+  left: 0;
+  top: 13px;
+  width: 20px;
+  height: 99px;
+  filter: url(#handle-remove-white); /* Figma 导出图的白底转透明 */
+  pointer-events: none;
+}
+
+/* ── 分区 ───────────────────────────────────────────────────── */
+.dev-sec {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.dev-sec:first-of-type { gap: var(--space-8); }
+.sec-icon {
+  display: block;
+  width: var(--dev-size-sec-icon);
+  height: var(--dev-size-sec-icon);
+  object-fit: contain;
+  object-position: left center;
+}
+
+.dev-row { display: flex; gap: var(--space-4); }
+.dev-row > select { flex: 1; min-width: 0; }
+.btn-row { display: flex; gap: var(--space-4); }
+.btn-row > .icon-btn { flex: 1; min-width: 0; }
+
+/* ── 控件外壳 ───────────────────────────────────────────────── */
+select,
+.icon-btn {
+  appearance: none;
+  -webkit-appearance: none;
+  height: var(--dev-size-control-height);
+  background: var(--dev-surface-control);
+  border: 1px solid var(--dev-border-default);
+  border-radius: var(--dev-radius-md);
+  color: var(--dev-text-1);
+  font-family: var(--dev-font-family);
+  font-size: var(--dev-font-sm);
+  line-height: var(--dev-line-height-sm);
+  cursor: pointer;
+  transition:
+    background var(--motion-micro) var(--motion-easing),
+    border-color var(--motion-micro) var(--motion-easing);
+}
+select { padding: 0 var(--space-8); width: 100%; }
+select option { background: var(--color-desk-void); color: var(--dev-text-1); }
+
+.icon-btn {
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+.icon-btn img {
+  width: var(--dev-size-icon);
+  height: var(--dev-size-icon);
+  display: block;
+}
+.icon-btn.is-danger { border-color: var(--dev-danger-border); }
+
+select:hover, .icon-btn:hover {
+  background: var(--dev-surface-control-hover);
+  border-color: var(--dev-border-strong);
+}
+.icon-btn:active {
+  background: var(--dev-accent);
+  border-color: var(--dev-accent);
+}
+
+/* ── 勾选项 ─────────────────────────────────────────────────── */
+.dev-check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  font-size: var(--dev-font-sm);
+  line-height: var(--dev-line-height-sm);
+  color: var(--dev-text-3);
+  cursor: pointer;
+}
+.dev-check input {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: none;
+  width: var(--dev-size-checkbox);
+  height: var(--dev-size-checkbox);
+  border: 1px solid var(--dev-checkbox-border);
+  /* Figma 是 11px 方块配 5px 圆角，视觉上就是个圆点。用 full 保证任何尺寸都圆 */
+  border-radius: var(--radius-full);
+  background: transparent;
+  cursor: pointer;
+  transition:
+    background var(--motion-micro) var(--motion-easing),
+    border-color var(--motion-micro) var(--motion-easing);
+}
+.dev-check input:checked {
+  background: var(--dev-accent);
+  border-color: var(--dev-accent);
+}
+
+/* ── 滑杆 ───────────────────────────────────────────────────── */
+.dev-slider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+.dev-slider input {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: 1;
+  min-width: 0;
+  height: 4px;
+  border-radius: var(--dev-radius-md);
+  /* 左侧已填充部分用强调色，和 Figma 的 Track + Fill 两层一致。
+     --p 由 main.ts 按当前值写入。 */
+  background: linear-gradient(
+    to right,
+    var(--dev-accent) 0 var(--p, 55%),
+    var(--dev-surface-control) var(--p, 55%) 100%
+  );
+  cursor: pointer;
+}
+.dev-slider input::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--dev-accent);
+}
+.dev-slider input::-moz-range-thumb {
+  width: 8px; height: 8px; border: none;
+  border-radius: var(--radius-full);
+  background: var(--dev-accent);
+}
+.dev-slider output {
+  font-family: var(--dev-font-family-mono);
+  font-size: var(--dev-font-xs);
+  line-height: var(--dev-line-height-xs);
+  color: var(--dev-accent);
+}
+
+/* ── 状态区 ─────────────────────────────────────────────────── */
+.dev-stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font-family: var(--dev-font-family-mono);
+  letter-spacing: var(--dev-letter-spacing);
+}
+.dev-stat > div { display: flex; align-items: center; justify-content: space-between; gap: var(--space-8); }
+.dev-stat span {
+  font-size: var(--dev-font-xs);
+  line-height: var(--dev-line-height-xs);
+  color: var(--dev-text-4);
+}
+.dev-stat b {
+  font-size: var(--dev-font-sm);
+  line-height: var(--dev-line-height-xs);
+  font-weight: var(--dev-font-weight);
+  color: var(--dev-text-2);
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 扩展诊断：默认隐藏，按 V 显示 */
+.dev-stat.is-verbose { display: none; }
+[data-verbose='on'] .dev-stat.is-verbose { display: flex; }
+
+.dev-note {
+  font-size: var(--dev-font-xs);
+  line-height: var(--dev-line-height-xs);
+  color: var(--dev-text-5);
+}
+.dev-note.is-error { color: var(--dev-danger-text); }
+
+/* ── 页脚 ───────────────────────────────────────────────────── */
+.dev-footer {
+  margin-top: auto;
+  padding-top: var(--space-16);
+  font-size: var(--dev-font-xs);
+  line-height: 9px;
+  color: var(--color-text);
+}
+
+/* ═══ 设备档 ═══════════════════════════════════════════════════
+   断点不写在这里。stage.ts 的 detectEnv() 是唯一判定处，结果通过
+   <html data-device> 广播下来，CSS 只负责响应。
+   ═══════════════════════════════════════════════════════════ */
+
+[data-device='tablet-portrait'] { --dev-size-panel-width: 170px; }
+[data-device='phone'] {
+  --dev-size-panel-width: min(calc(100vw - 40px), 200px);
+  --dev-size-control-height: 34px;
+  --dev-size-checkbox: 14px;
+}
+/* 1280×720 是你 Figma 画板的尺寸，宽度按设计稿的 150 对齐 */
+[data-device='tablet-landscape'] { --dev-size-panel-width: 150px; }
+[data-device='kiosk'] {
+  --dev-size-panel-width: 170px;
+  --dev-size-control-height: 32px;
+  --dev-font-sm: 13px;
+}

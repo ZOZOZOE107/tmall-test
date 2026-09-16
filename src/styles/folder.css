@@ -1,0 +1,268 @@
+/*
+ * 桌面衣橱文件夹。几何数值全部来自 Figma（收起 121:562 / 展开 112:1620），
+ * 归一化成「图标边长的倍数」之后放在 wardrobe-folder.ts 的 FAN 表里，卡片的位移
+ * 由 GSAP 驱动，这个文件只负责静态摆位和尺寸。
+ */
+
+/*
+ * .folder 本身是个零尺寸的锚点，原点就是文件夹图标的中心 —— 所有子元素都按
+ * 「图标边长的倍数」从这个原点偏移，和 Figma 里归一化过的数值一一对上。
+ * 本体不接鼠标，热区和卡片各自接，事件靠冒泡上来。
+ */
+.folder {
+  position: absolute;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+/*
+ * 这里原来有一块 .folder-hit：盖住整片扇形的透明方块。它已经没用了 ——
+ * 展开收起全靠 wardrobe-folder.ts 里按坐标算的感应区，这块 DOM 不接任何事件，
+ * 却顶着 2.7×2.9 个图标那么大的面积把事件全吃掉，连压在底下的图标都按不动。
+ */
+
+.folder-icon {
+  position: absolute;
+  left: 0;
+  top: 0;
+  /* 只缩图标视觉本身；--folder 仍保持原尺寸，卡片、感应区和标签都不会跟着缩放。 */
+  width: calc(var(--folder) * 0.8);
+  height: calc(var(--folder) * 0.8);
+  /* 居中由 GSAP 的 xPercent/yPercent 做，这里不能再写 transform */
+  /* 文件夹压在衣服之上，衣服才像是从里面探出来的 */
+  z-index: 2;
+  /* 图标是排版时的拖拽把手，所以它自己要接鼠标 */
+  pointer-events: auto;
+  cursor: grab;
+  user-select: none;
+}
+.folder-icon:active { cursor: grabbing; }
+/*
+ * 白灰文件夹。没有单独出一张 PNG —— 蓝的那张去色再提亮就是，
+ * 折角和阴影的层次都还在，而且换图标只要换一个文件。
+ */
+.folder[data-tone='grey'] .folder-icon {
+  filter: grayscale(1) brightness(1.28) contrast(0.92);
+}
+
+.folder-label {
+  position: absolute;
+  left: 0;
+  top: calc(var(--folder) * 0.52);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: calc(var(--folder) * 0.06);
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: calc(var(--folder) * 0.145);
+  line-height: 1.2;
+  color: var(--color-cut-white);
+  text-shadow: 0 0 calc(var(--folder) * 0.05) var(--color-cut-shadow);
+  pointer-events: none;
+}
+.folder-label > i {
+  width: calc(var(--folder) * 0.13);
+  height: calc(var(--folder) * 0.13);
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+}
+
+/* ── 扇出来的四张卡 ─────────────────────────────────────────── */
+.folder-cards {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  z-index: 1;
+}
+
+/*
+ * 位移、缩放、旋转、透明度全部归 GSAP 管（收起/展开/被指着三个状态都在
+ * wardrobe-folder.ts 的 target() 里）。这里只留尺寸 —— 两边都写 transform 会打架。
+ */
+.folder-card {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: calc(var(--folder) * var(--w));
+  height: calc(var(--folder) * var(--h));
+  padding: 0;
+  border: 0;
+  background: none;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* 已经被取走、正在飞向身体的原缩略图必须彻底消失；不让 GSAP 的布局动画覆盖。 */
+.folder-card.is-flying {
+  opacity: 0 !important;
+  visibility: hidden;
+}
+.folder-card > img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+  filter: drop-shadow(0 calc(var(--folder) * 0.03) calc(var(--folder) * 0.06) var(--color-cut-shadow));
+}
+
+/* ── 指尖光标 ───────────────────────────────────────────────
+ * 让人看见系统认为他的手指在哪。对不准的时候没有这个只能瞎猜。
+ */
+.folder-cursor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 7;
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--color-cut-white);
+  border-radius: var(--radius-full);
+  background: var(--color-tmall-red);
+  box-shadow: 0 2px 8px var(--color-cut-shadow);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--motion-fast) linear;
+}
+.folder-cursor.is-on { opacity: 0.9; }
+
+/* ── 停留计时的进度环 ──────────────────────────────────────── */
+.folder-dwell {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 6;
+  width: var(--dwell-size);
+  height: var(--dwell-size);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--motion-fast) linear;
+  --dwell-size: 56px;
+  /* 每个文件夹用自己主题的高饱和色，JS 写进来；没写就退回天猫红 */
+  --dwell-color: var(--color-tmall-red);
+  /* 走多久由 JS 写进来，对应 wardrobe-folder.ts 里的 WEAR_MS */
+  --dwell: 4000ms;
+}
+.folder-dwell.is-on { opacity: 1; }
+.folder-dwell svg {
+  width: 100%;
+  height: 100%;
+  /* 从 12 点方向开始转 */
+  transform: rotate(-90deg);
+}
+.folder-dwell circle {
+  fill: none;
+  stroke: var(--color-cut-white);
+  stroke-width: 3;
+  opacity: 0.35;
+}
+
+/*
+ * 转圈直接过渡 stroke-dashoffset —— 它本身就是可动画属性，不用注册自定义属性，
+ * 也就不会踩「@property inherits: false，子元素读不到」那个坑。
+ */
+.folder-dwell circle.bar {
+  stroke: var(--dwell-color);
+  opacity: 1;
+  stroke-linecap: round;
+  stroke-dasharray: 113.1; /* 2πr, r = 18 */
+  stroke-dashoffset: 113.1;
+  transition: stroke-dashoffset 0s linear;
+}
+.folder-dwell.is-on circle.bar {
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset var(--dwell) linear;
+}
+
+/* ── 倒计时数字 ─────────────────────────────────────────────
+ * 画面正中，小而简约。数字本身由 GSAP 每跳一个数重播一次缩放。
+ */
+#countdown {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 8;
+  transform: translate(-50%, -50%);
+  font-family: var(--font-family);
+  font-size: clamp(48px, 9vmin, 120px);
+  font-weight: 300;
+  /* 数字等宽，3→2→1 跳的时候不会左右晃 */
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--color-cut-white);
+  text-shadow: 0 2px 24px var(--color-cut-shadow);
+  opacity: 0;
+  pointer-events: none;
+  user-select: none;
+}
+#countdown.is-on { opacity: 1; }
+
+/* ── 张掌换装：解锁后的常驻提示条 ─────────────────────────────
+ * 举稳 1.5 秒解锁后出现，告诉人「现在歪一下能换衣服，左上右下」。
+ * 每次真的触发一次换装，对应那侧的字会弹一下（JS 里 gsap 单独控制）。
+ */
+#palm-badge {
+  position: absolute;
+  left: 50%;
+  top: 6%;
+  z-index: 8;
+  transform: translate(-50%, 0);
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  padding: 8px 20px;
+  border-radius: var(--radius-full);
+  background: var(--color-ink-50);
+  font-family: var(--font-family);
+  font-size: 14px;
+  color: var(--color-cut-white);
+  text-shadow: 0 1px 6px var(--color-cut-shadow);
+  opacity: 0;
+  pointer-events: none;
+  user-select: none;
+  transition: opacity var(--motion-fast) linear;
+}
+#palm-badge.is-on { opacity: 1; }
+#palm-badge .side { display: inline-block; }
+
+/* ── 快门闪白 ───────────────────────────────────────────────── */
+#flash {
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  background: var(--color-cut-white);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ── 飞进相册的那张照片 ─────────────────────────────────────── */
+/*
+ * 这个元素既飞照片也飞衣服，但两者的阴影**不能用同一种**：
+ * 照片是张实心的相纸，box-shadow 画在矩形边界上正合适；
+ * 衣服是带透明通道的 PNG，box-shadow 会沿着矩形边界画一圈 —— 就是衣服周围
+ * 那个莫名其妙的小边框。衣服得用 drop-shadow 滤镜，它跟着 alpha 走。
+ */
+#shot-fly {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 8;
+  display: none;
+  pointer-events: none;
+  user-select: none;
+}
+#shot-fly.is-on { display: block; }
+
+#shot-fly.is-photo {
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 28px var(--color-cut-shadow);
+}
+#shot-fly.is-garment {
+  object-fit: contain;
+  filter: drop-shadow(0 6px 16px var(--color-cut-shadow));
+}
