@@ -244,6 +244,30 @@ function fanFor(n: number): FanSlot[] {
   })
 }
 
+/**
+ * 把整套扇形绕图标中心转一个角度，让它整体偏向 `side` 那一侧 —— 不拆散重排
+ * 哪张卡在哪，还是原来那套 Figma 扇形的相对形状，只是当一个整体转了个方向，
+ * 转过去之后自然就没有卡牌伸向贴边那一侧了。
+ *
+ * x/y 是位置，转一下就好；rot 是卡牌自己的朝向，得跟着加同样的角度，不然卡牌
+ * 位置转了但卡面朝向没变，看着就是「歪了」而不是「转了」。restX/restY 同理转一下，
+ * 收起态里那一小撮堆叠也跟着扇形一起偏，不会显得和展开态对不上。
+ */
+function rotateFanInward(fan: FanSlot[], side: 'left' | 'right', deg: number): FanSlot[] {
+  const signed = side === 'right' ? deg : -deg
+  const a = (signed * Math.PI) / 180
+  const co = Math.cos(a)
+  const si = Math.sin(a)
+  const turn = (x: number, y: number) => ({ x: x * co - y * si, y: x * si + y * co })
+  return fan.map((f) => {
+    const p = turn(f.x, f.y)
+    const r = turn(f.restX, f.restY)
+    return { ...f, x: p.x, y: p.y, rot: f.rot + signed, restX: r.x, restY: r.y }
+  })
+}
+/** 转多少度。太小看不出效果，太大扇形会歪得不像原来的样子 */
+const FAN_TILT_DEG = 26
+
 /** 碰到的那件抬起多少、放大多少。单位同样是图标边长的倍数 */
 const AIM_LIFT = 0.14
 const AIM_SCALE = 1.12
@@ -266,6 +290,8 @@ export interface FolderOptions {
   /** 主题 id，拖动后的位置按这个存 localStorage */
   id: string
   label: string
+  /** 名字下面那一行小字，没有就不显示——摆设图标（废纸篓、截屏）不传 */
+  brand?: string
   pieces: FolderPiece[]
   /**
    * 文件夹装的是什么，决定停满之后干嘛：
@@ -282,6 +308,10 @@ export interface FolderOptions {
   dot?: string
   /** 进度环的颜色。同色相的高饱和版本 —— 压在实拍画面上要跳得出来 */
   ring?: string
+  /** 图标未展开、指向/悬停图标时的极简提示；不传就用通用的「按住拖动」 */
+  iconHint?: string
+  /** 展开后指向/停留某张卡片时的极简提示；不传就不显示 */
+  cardHint?: string
   /** 文件夹图标中心在舞台里的归一化位置 */
   at: { x: number; y: number }
   /** 文件夹图标边长，占舞台宽度的比例 */
@@ -299,8 +329,10 @@ export interface FolderOptions {
 export class WardrobeFolder {
   private root: HTMLElement
   private cardBox: HTMLElement
-  /** 这个文件夹的扇形位置表，按实际件数生成 */
+  /** 这个文件夹的扇形位置表，按实际件数生成，已经按当前位置转好方向 */
   private fan: FanSlot[] = []
+  /** 转方向之前的原始扇形，靠边判定要重算时从这份重新转，不能拿转过的再转一次 */
+  private fanFlat: FanSlot[] = []
   private cards: HTMLElement[] = []
   /** 当前装着的东西。照片模式下会随时增删 */
   private pieces: FolderPiece[] = []
@@ -315,6 +347,8 @@ export class WardrobeFolder {
   /** 正在跑的那次扇形收放动画。卡片一重建就得先掐掉它 */
   private fanTl: gsap.core.Tween | null = null
   private ring: HTMLElement
+  private iconHintEl: HTMLElement
+  private cardHintEl: HTMLElement | null
   private icon!: HTMLElement
   /** 图标图片的地址，alpha 蒙版按它取 */
   private iconSrc = ''
@@ -355,9 +389,14 @@ export class WardrobeFolder {
     root.innerHTML = `
       <div class="folder-cards"></div>
       <img class="folder-icon" src="${opts.icon ?? '/assets/folder-macos.png'}" alt="" draggable="false" />
-      <span class="folder-label"><i></i><span></span></span>
+      <span class="folder-label"><i></i><span class="folder-label-text"><span class="folder-label-name"></span><span class="folder-label-brand"></span></span></span>
+      <span class="hint-tag folder-icon-hint"></span>
     `
-    root.querySelector('.folder-label > span')!.textContent = opts.label
+    root.querySelector('.folder-label-name')!.textContent = opts.label
+    const brandEl = root.querySelector('.folder-label-brand') as HTMLElement
+    // 摆设图标（废纸篓、截屏那些）没有品牌，这一行就不显示
+    if (opts.brand) brandEl.textContent = opts.brand
+    else brandEl.remove()
     const dot = root.querySelector('.folder-label > i') as HTMLElement
     // 没给颜色就不显示那个小圆点 —— 废纸篓、截屏这类系统图标本来也没有
     if (opts.dot) dot.style.background = opts.dot
@@ -366,11 +405,24 @@ export class WardrobeFolder {
     this.cardBox = root.querySelector('.folder-cards') as HTMLElement
     this.pieces = opts.pieces
 
+    this.iconHintEl = root.querySelector('.folder-icon-hint') as HTMLElement
+    this.iconHintEl.textContent = opts.iconHint ?? '按住拖动'
+
     this.ring = document.createElement('div')
     this.ring.className = 'folder-dwell'
     this.ring.innerHTML = '<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="18" /><circle cx="20" cy="20" r="18" class="bar" /></svg>'
     this.ring.style.setProperty('--dwell', `${DWELL_BY_MODE[opts.mode ?? 'wear']}ms`)
     if (opts.ring) this.ring.style.setProperty('--dwell-color', opts.ring)
+
+    // 展开后停在某张卡片上的极简提示，只有传了 cardHint 才造这个元素
+    this.cardHintEl = opts.cardHint
+      ? (() => {
+          const el = document.createElement('div')
+          el.className = 'hint-tag folder-card-hint'
+          el.textContent = opts.cardHint!
+          return el
+        })()
+      : null
 
     this.root = root
     this.icon = root.querySelector('.folder-icon') as HTMLElement
@@ -390,6 +442,7 @@ export class WardrobeFolder {
       this.startMove(ev)
     })
     opts.host.append(root, this.ring)
+    if (this.cardHintEl) opts.host.append(this.cardHintEl)
     // 指尖光标：让人看见系统认为他的手指在哪，不然对不准只能瞎猜
     this.cursor = getCursor(opts.host)
 
@@ -409,7 +462,8 @@ export class WardrobeFolder {
     gsap.killTweensOf(this.cards)
     this.cardBox.innerHTML = ''
     this.cards = []
-    this.fan = fanFor(Math.min(this.pieces.length, FAN.length))
+    this.fanFlat = fanFor(Math.min(this.pieces.length, FAN.length))
+    this.refreshFan()
     this.pieces.slice(0, this.fan.length).forEach((p, i) => {
       const card = document.createElement('div')
       card.className = 'folder-card'
@@ -428,6 +482,29 @@ export class WardrobeFolder {
     this.hideRing()
     this.lastSize = -1 // 逼 layout() 重新摆一遍
     this.layout()
+  }
+
+  /** 离哪边够近算「贴边」——两边各占屏幕这么宽的一条带，中间照常打开 */
+  private static readonly EDGE_ZONE = 0.3
+
+  /**
+   * 自己知道现在是不是贴着边：贴左边就该往右转，贴右边就该往左转，
+   * 中间（没贴任何一边）就是 null，用原始 Figma 扇形，不转。
+   */
+  private fanSideAuto(): 'left' | 'right' | null {
+    if (this.at.x < WardrobeFolder.EDGE_ZONE) return 'right'
+    if (this.at.x > 1 - WardrobeFolder.EDGE_ZONE) return 'left'
+    return null
+  }
+
+  /**
+   * 按此刻的位置重新决定扇形转不转、往哪转。文件夹是先拖动关闭扇形、放开手才
+   * 重新展开的（见 startMove 里的 setOpen(false)），所以只要在「真正要打开」
+   * 之前调用这个，就总能拿到跟当前位置匹配的方向，不用每帧都重算。
+   */
+  private refreshFan() {
+    const side = this.fanSideAuto()
+    this.fan = side ? rotateFanInward(this.fanFlat, side, FAN_TILT_DEG) : this.fanFlat
   }
 
   /** 换一批内容（照片加一张、删一张都走这里） */
@@ -535,6 +612,8 @@ export class WardrobeFolder {
 
   private setOpen(v: boolean) {
     if (this.open === v) return
+    // 每次真正展开前才重新判一次贴边方向——文件夹可能刚被拖到别的位置
+    if (v) this.refreshFan()
     if (v) this.bringToFront()
     this.open = v
     if (!v) this.clearAim()
@@ -602,6 +681,8 @@ export class WardrobeFolder {
    * 只在状态翻转时起一次动画 —— 每帧重设的话 GSAP 会不停重启，动画永远走不完。
    */
   private setTouched(v: boolean) {
+    // 提示标签每帧都可能重设同一个值，不能卡在「只在翻转时」那条 return 后面
+    this.iconHintEl.classList.toggle('is-on', v)
     if (this.touched === v) return
     this.touched = v
     gsap.to(this.icon, {
@@ -671,7 +752,7 @@ export class WardrobeFolder {
    */
   private extent() {
     // 空文件夹没有扇形，占地就是图标本身加下面那行字
-    if (!this.fan.length) return { up: 0.55, down: 0.75, side: 0.55 }
+    if (!this.fan.length) return { up: 0.55, down: 0.75, left: 0.55, right: 0.55 }
     const half = (f: FanSlot) => {
       const a = (f.rot * Math.PI) / 180
       const c = Math.abs(Math.cos(a))
@@ -683,8 +764,11 @@ export class WardrobeFolder {
     }
     const up = Math.max(...this.fan.map((f) => -f.y + AIM_LIFT + half(f).h))
     const down = Math.max(0.7, ...this.fan.map((f) => f.y + half(f).h))
-    const side = Math.max(...this.fan.map((f) => Math.abs(f.x) + half(f).w))
-    return { up, down, side }
+    // 左右分开算，不再对称收紧——转过方向的扇形（fanSide）两边伸出量不一样，
+    // 拖动边界得各自贴着卡牌真实的伸展量，不能被没用到的那一侧拖累
+    const left = Math.max(0.3, ...this.fan.map((f) => Math.max(0, half(f).w - f.x)))
+    const right = Math.max(0.3, ...this.fan.map((f) => Math.max(0, f.x + half(f).w)))
+    return { up, down, left, right }
   }
 
   private startMove(ev: PointerEvent) {
@@ -709,10 +793,10 @@ export class WardrobeFolder {
       const { w: sw, h: sh } = this.opts.stageSize()
       const p = this.opts.toLocal(e.clientX, e.clientY)
       const s = this.opts.size * sw
-      const { up, down, side } = this.extent()
+      const { up, down, left, right } = this.extent()
       const cl = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v))
       this.at = {
-        x: cl((p.x + grab.x) / sw, (side * s) / sw, 1 - (side * s) / sw),
+        x: cl((p.x + grab.x) / sw, (left * s) / sw, 1 - (right * s) / sw),
         y: cl((p.y + grab.y) / sh, (up * s) / sh, 1 - (down * s) / sh),
       }
       this.layout()
@@ -866,10 +950,16 @@ export class WardrobeFolder {
     this.ring.classList.remove('is-on')
     void this.ring.offsetWidth
     this.ring.classList.add('is-on')
+    // 提示贴在环再往外一点，不挡环本身的转圈
+    if (this.cardHintEl) {
+      this.cardHintEl.style.transform = `translate(${at.x}px, ${at.y}px) translate(-50%, -180%)`
+      this.cardHintEl.classList.add('is-on')
+    }
   }
 
   private hideRing() {
     this.ring.classList.remove('is-on')
+    this.cardHintEl?.classList.remove('is-on')
   }
 
   /**
@@ -957,6 +1047,7 @@ export class WardrobeFolder {
     gsap.killTweensOf(this.cards)
     this.root.remove()
     this.ring.remove()
+    this.cardHintEl?.remove()
     // cursor 是全局共用的，不归这个实例删
   }
 }

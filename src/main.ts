@@ -26,6 +26,13 @@ const imageEl = $<HTMLImageElement>('src-image')
 const segmentationEl = $<HTMLCanvasElement>('segmentation')
 const canvasEl = $<HTMLCanvasElement>('overlay')
 const propsEl = $('props')
+const frameGuideEl = $('frame-guide')
+
+/** 24/23 号点（左右髋）没稳定识别到时，提示人往虚线框里站 */
+function syncFrameGuide(lms: { visibility?: number }[] | undefined, minVisibility: number) {
+  const hipsOk = !!lms && [23, 24].every((i) => (lms[i]?.visibility ?? 0) >= minVisibility)
+  frameGuideEl.classList.toggle('is-on', !hipsOk)
+}
 const bootHint = $('boot-hint')
 
 const ui = {
@@ -186,6 +193,7 @@ async function loadLook(themeId: string, lookId: string) {
   ;(window as unknown as { __mesh: MeshGarment | null }).__mesh = meshTop
   ;(window as unknown as { __meshBottom: MeshGarment | null }).__meshBottom = meshBottom
   syncTrash()
+  syncThemeTagline()
   console.info('[wardrobe] 已加载', themeId, lookId, meshAll().map((g) => g.cfg.id))
 }
 
@@ -213,12 +221,28 @@ const FOLDER_AT: Record<string, { x: number; y: number }> = {
   persona: { x: 0.5, y: 0.1 },
   trash: { x: 0.92, y: 0.93 },
   screenshot: { x: 0.08, y: 0.5 },
+  'wool-rain': { x: 0.92, y: 0.5 },
 }
 
+/**
+ * 贴边扇形转向现在是 WardrobeFolder 自己按当前位置判的（离哪边近就往哪边转，
+ * 中间正常打开），不用在这儿按主题手动配了——见 wardrobe-folder.ts 的
+ * fanSideAuto()。
+ */
+
 /** 桌面上的摆设图标：只有图标和名字，不装衣服，但一样能拖 */
-const DESK_ICONS: Array<{ id: string; label: string; icon: string }> = [
-  { id: 'trash', label: '废纸篓', icon: '/assets/icon-trash-full.png' },
-  { id: 'screenshot', label: '截屏', icon: '/assets/icon-screenshot-macos.png' },
+/** 四个主题文件夹各自的图标图，来自 Figma 导出（天猫超级品类日VI-2026年7月(2)/icon） */
+const THEME_ICON: Record<string, string> = {
+  intellect: '/assets/folder-intellect.png',
+  editor: '/assets/folder-editor.png',
+  homebody: '/assets/folder-homebody.png',
+  outdoor: '/assets/folder-outdoor.png',
+}
+
+const DESK_ICONS: Array<{ id: string; label: string; icon: string; dot?: string; iconHint?: string; cardHint?: string }> = [
+  { id: 'trash', label: '废纸篓', icon: '/assets/icon-trash-full.png', cardHint: '停留脱下' },
+  { id: 'screenshot', label: '截屏', icon: '/assets/icon-screenshot-macos.png', iconHint: '点/捏两下拍照' },
+  { id: 'wool-rain', label: '羊毛雨', icon: '/assets/cloud.png', dot: '#ffffff', iconHint: '点/捏两下开关' },
 ]
 
 let folders: WardrobeFolder[] = []
@@ -268,13 +292,68 @@ const layerTape = makeMeshLayer('mesh-tape')
 const layerCloudRain = makeMeshLayer('cloud-rain')
 const cloudRain = new CloudRainEffect(layerCloudRain)
 
+/**
+ * 拉绳手柄没有对应的 DOM 元素（画在 canvas 上），提示单独造，挂在 #props 里跟着
+ * toProps() 换算位置 —— 这样镜像时文字不会被翻转反着写。只在手/鼠标已经抓住
+ * 手柄时才出现（确认「抓对了」，不是教人怎么抓），贴在手柄正上方，躲开羊毛图标本身。
+ */
+const handleHintTag = document.createElement('div')
+handleHintTag.className = 'hint-tag'
+handleHintTag.textContent = '拉一下下雨'
+propsEl.append(handleHintTag)
+
+/** 云雨层用的是源画面坐标（没镜像过），道具层是观众看到的坐标——镜像时要翻一下横坐标 */
+const sourceToProps = (p: { x: number; y: number }) =>
+  stage.mirrored ? { x: stage.content.w - p.x, y: p.y } : p
+
+/** 每帧把手柄的悬浮提示贴到它此刻的实际渲染位置上 */
+function syncCloudRainHints() {
+  const handleAt = cloudRain.handleHintVisible ? cloudRain.getHandlePoint() : null
+  if (handleAt) {
+    const p = sourceToProps(handleAt)
+    // 手柄图标本身是 radius*4 那么高，提示得躲到它上沿以外，不能压在羊头上
+    handleHintTag.style.transform = `translate(${p.x}px, ${p.y - handleAt.radius * 2 - 10}px) translate(-50%, -100%)`
+    handleHintTag.classList.add('is-on')
+  } else {
+    handleHintTag.classList.remove('is-on')
+  }
+}
+
+/**
+ * 鼠标点一下「羊毛雨」桌面图标 → 开关切换；点已经飘出来的云 → 只关不开。
+ * 图标在道具层坐标系（镜像过），云在源画面坐标系（没镜像过），同一个 client
+ * 坐标要分别换算成两套坐标才能各自命中判定。
+ */
+function handleCloudRainClick(clientX: number, clientY: number, srcPoint: { x: number; y: number }) {
+  if (cloudRain.hitCloud(srcPoint)) {
+    if (ui.cloudRain.checked) setCloudRainOn(false)
+    return
+  }
+  const icon = folders.find((f) => f.id === 'wool-rain')
+  if (icon?.hitIcon(toProps(clientX, clientY))) {
+    setCloudRainOn(!ui.cloudRain.checked)
+  }
+}
+
+/** 捏合的上升沿落在云上面 → 只关，不用捏两下（已经在眼前了，不用防误触） */
+let cloudClosePinchWasOn = false
+function handleCloudRainClosePinch(p: { x: number; y: number } | null) {
+  const on = !!p
+  if (on && !cloudClosePinchWasOn && p && cloudRain.hitCloud(p) && ui.cloudRain.checked) {
+    setCloudRainOn(false)
+  }
+  cloudClosePinchWasOn = on
+}
+
 for (const type of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel'] as const) {
   viewportEl.addEventListener(
     type,
     (event) => {
       const p = stage.toLocal(event.clientX, event.clientY)
-      if (type === 'pointerdown') cloudRain.pointerDown(p)
-      else if (type === 'pointermove') cloudRain.pointerMove(p)
+      if (type === 'pointerdown') {
+        cloudRain.pointerDown(p)
+        handleCloudRainClick(event.clientX, event.clientY, p)
+      } else if (type === 'pointermove') cloudRain.pointerMove(p)
       else cloudRain.pointerUp()
     },
     // 绳头可能和衣服/文件夹道具重叠，捕获阶段先收到事件，不被子元素 stopPropagation 拦住。
@@ -287,8 +366,10 @@ for (const type of ['mousedown', 'mousemove', 'mouseup'] as const) {
     type,
     (event) => {
       const p = stage.toLocal(event.clientX, event.clientY)
-      if (type === 'mousedown') cloudRain.pointerDown(p)
-      else if (type === 'mousemove') cloudRain.pointerMove(p)
+      if (type === 'mousedown') {
+        cloudRain.pointerDown(p)
+        handleCloudRainClick(event.clientX, event.clientY, p)
+      } else if (type === 'mousemove') cloudRain.pointerMove(p)
       else cloudRain.pointerUp()
     },
     { capture: true },
@@ -391,6 +472,8 @@ let pinchWasOn = false
 let lastPinchAt = 0
 let countdownUntil = 0
 let captureNext = false
+/** 「羊毛雨」图标捏两下开关用的独立计时，不跟截屏那个抢 */
+let lastCloudIconPinchAt = 0
 
 interface Shot {
   id: string
@@ -423,14 +506,27 @@ function hideCountdown() {
 /** 捏合的上升沿落在截屏图标上，而且和上一次挨得够近 → 起倒计时 */
 function handlePinch(p: { x: number; y: number } | null, now: number) {
   const on = !!p
-  if (on && !pinchWasOn && p && !countdownUntil) {
+  const risingEdge = on && !pinchWasOn && !!p
+  if (risingEdge && !countdownUntil) {
     const shutter = folders.find((f) => f.id === 'screenshot')
-    if (shutter?.hitIcon(p)) {
+    if (shutter?.hitIcon(p!)) {
       if (now - lastPinchAt < DOUBLE_PINCH_MS) {
         lastPinchAt = 0
         countdownUntil = now + COUNTDOWN_MS
       } else {
         lastPinchAt = now
+      }
+    }
+  }
+  // 「羊毛雨」图标捏两下 → 开关切换。跟截屏共用捏合信号，但计时和判定各自独立
+  if (risingEdge) {
+    const rainIcon = folders.find((f) => f.id === 'wool-rain')
+    if (rainIcon?.hitIcon(p!)) {
+      if (now - lastCloudIconPinchAt < DOUBLE_PINCH_MS) {
+        lastCloudIconPinchAt = 0
+        setCloudRainOn(!ui.cloudRain.checked)
+      } else {
+        lastCloudIconPinchAt = now
       }
     }
   }
@@ -735,6 +831,8 @@ function takeOff(piece: FolderPiece) {
   ;(window as unknown as { __meshBottom: MeshGarment | null }).__meshBottom = meshBottom
 
   syncTrash()
+  // 脱衣服不用等飞行动画，人一摘下来就该收
+  syncThemeTagline()
   console.info('[wardrobe] 脱下', piece.cfg.id)
 }
 
@@ -856,6 +954,7 @@ async function wearFit(
   if (!from) {
     // 没给起点（比如开局加载）就直接穿上，不放飞行动画，胶带也就当场贴好
     tapeFrom.set(next, performance.now())
+    syncThemeTagline()
     return
   }
 
@@ -911,13 +1010,80 @@ propsEl.append(palmRing)
 
 const palmBadge = document.createElement('div')
 palmBadge.id = 'palm-badge'
+palmBadge.className = 'hint-tag'
 palmBadge.innerHTML = '<span class="side is-left">◀ 上衣</span><span class="side is-right">下装 ▶</span>'
 propsEl.append(palmBadge)
+
+/** 举稳阶段（还没解锁）跟着 palmRing 一起显示的待命提示 */
+const palmArmHint = document.createElement('div')
+palmArmHint.className = 'hint-tag palm-arm-hint'
+palmArmHint.textContent = '举掌稳住'
+propsEl.append(palmArmHint)
+
+/**
+ * 主题赛道词语：上衣和下装凑成同一个主题的整套时才出现，图来自 Figma 导出的
+ * 主题 SVG（psd/SVG 目录），一个主题一张，src 换着来。
+ */
+const THEME_TAGLINE_SRC: Record<string, string> = {
+  intellect: '/assets/tagline-intellect.svg',
+  editor: '/assets/tagline-editor.svg',
+  homebody: '/assets/tagline-homebody.svg',
+  outdoor: '/assets/tagline-outdoor.svg',
+}
+const themeTagline = document.createElement('img')
+themeTagline.id = 'theme-tagline'
+themeTagline.alt = ''
+propsEl.append(themeTagline)
+
+/** 掉落动画的起点：从这么多像素高的上方落下来，收起时原路跳回去 */
+const TAGLINE_DROP_PX = 40
+gsap.set(themeTagline, { xPercent: -50, scale: 0.8, y: -TAGLINE_DROP_PX, opacity: 0 })
+let taglineOn = false
+
+/** 上衣下装凑成同一个主题整套时才亮出对应的赛道词语，混搭或缺一件就收起 */
+function syncThemeTagline() {
+  const topTheme = meshTop?.cfg.id.split('-look')[0]
+  const bottomTheme = meshBottom?.cfg.id.split('-look')[0]
+  const src = topTheme && topTheme === bottomTheme ? THEME_TAGLINE_SRC[topTheme] : undefined
+  if (!src) {
+    if (taglineOn) {
+      taglineOn = false
+      // 离开：原路跳回上面去，快一点，不用弹性
+      gsap.to(themeTagline, { y: -TAGLINE_DROP_PX, opacity: 0, duration: 0.28, ease: 'power2.in', overwrite: true })
+    }
+    return
+  }
+  if (themeTagline.getAttribute('src') !== src) themeTagline.src = src
+  if (!taglineOn) {
+    taglineOn = true
+    // 出现：从上面掉下来，带一点回弹，像真的掉在这儿一样
+    gsap.fromTo(
+      themeTagline,
+      { y: -TAGLINE_DROP_PX, opacity: 0 },
+      { y: 0, opacity: 0.9, duration: 0.5, ease: 'bounce.out', overwrite: true },
+    )
+  }
+}
+
+/**
+ * 虚线框贴着赛道词语的实际底边走，不用写死的百分比 —— 换一张比例不同的图，
+ * #stage 的高宽比会跟着变，两个固定百分比之间的视觉间距也会跟着跑偏。
+ * 用 getBoundingClientRect 量的是变换（scale）之后的真实渲染框，比 offsetHeight 准。
+ */
+function syncFrameGuideTop(stageW: number) {
+  const taglineRect = themeTagline.getBoundingClientRect()
+  const parentRect = propsEl.getBoundingClientRect()
+  const gap = stageW * 0.015
+  frameGuideEl.style.top = `${taglineRect.bottom - parentRect.top + gap}px`
+}
 
 let palmRingOn = false
 
 function showPalmRing(at: { x: number; y: number }) {
   palmRing.style.transform = `translate(${at.x}px, ${at.y}px) translate(-50%, -50%)`
+  // 提示贴在环正上方一点
+  palmArmHint.style.transform = `translate(${at.x}px, ${at.y}px) translate(-50%, -140%)`
+  palmArmHint.classList.add('is-on')
   if (palmRingOn) return
   palmRingOn = true
   // 重启一次 CSS transition：先摘掉 class，逼一次重排，再挂回去
@@ -929,6 +1095,7 @@ function showPalmRing(at: { x: number; y: number }) {
 function hidePalmRing() {
   palmRingOn = false
   palmRing.classList.remove('is-on')
+  palmArmHint.classList.remove('is-on')
 }
 
 function flashPalmSide(side: 'left' | 'right') {
@@ -994,6 +1161,9 @@ function handleQuickChange(hands: HandLandmarkerResult['landmarks'] | undefined,
     }
     return
   }
+
+  // 解锁之后提示条跟着手走，贴在中指上方——每帧都要跟，不然手一动提示就甩在原地了
+  palmBadge.style.transform = `translate(${pose.mid.x}px, ${pose.mid.y}px) translate(-50%, -130%)`
 
   // 换过一次后必须先回到竖直区，才允许下一次倾斜触发。
   if (Math.abs(tilt) <= PALM_NEUTRAL_DEG) {
@@ -1101,6 +1271,8 @@ function stepArriving(now: number, lms: NormalizedLandmark[] | undefined, w: num
       a.mesh.dropCloth()
       // 布放完了，这会儿才贴胶带 —— 飞的过程中贴上去会跟着布一起乱飘
       tapeFrom.set(a.mesh, now)
+      // 赛道词语也要等衣服真的穿好落地，不然衣服还在飞就先亮了
+      syncThemeTagline()
       return false
     }
     return true
@@ -1152,8 +1324,11 @@ async function mountFolders() {
         host: propsEl,
         id: theme.id,
         label: theme.name,
+        icon: THEME_ICON[theme.id],
         dot: `var(--${theme.color.replace(/\//g, '-')})`,
         ring: `var(--${theme.color.replace(/\//g, '-')}-vivid)`,
+        iconHint: '指向展开',
+        cardHint: '停留穿上',
         pieces,
         at,
         size: FOLDER_SIZE,
@@ -1176,6 +1351,7 @@ async function mountFolders() {
         icon: '/assets/icon-persona-wool.png',
         dot: 'var(--color-ink-50)',
         mode: 'photo',
+        cardHint: '停留删除',
         pieces: [],
         at,
         size: FOLDER_SIZE,
@@ -1197,8 +1373,11 @@ async function mountFolders() {
         id: d.id,
         label: d.label,
         icon: d.icon,
+        dot: d.dot,
         // 废纸篓装的是「身上正穿着的」，停满 2 秒就脱下来扔进去
         mode: d.id === 'trash' ? 'trash' : undefined,
+        iconHint: d.iconHint,
+        cardHint: d.cardHint,
         pieces: [],
         at: p,
         size: FOLDER_SIZE,
@@ -1226,6 +1405,7 @@ async function mountFolders() {
   // loadLook 和 mountFolders 是并发的，谁先完成不一定。loadLook 里那次 syncTrash
   // 可能跑在废纸篓还没建出来的时候，所以这儿要再同步一次
   syncTrash()
+  syncThemeTagline()
   console.info('[wardrobe] 文件夹', folders.length, '个')
 }
 
@@ -1370,7 +1550,7 @@ sources.onDevicesChange = (devices) => fillDevices(devices)
 
 const OFF = '__off__'
 /** 摄像头不可用时的默认场景图 */
-const DEFAULT_SCENE = '/test/default-scene.png'
+const DEFAULT_SCENE = '/test/default-scene.jpg'
 
 function fillDevices(devices: MediaDeviceInfo[]) {
   const keep = ui.device.value
@@ -1510,14 +1690,17 @@ ui.vis.addEventListener('input', () => {
   if (sources.current.kind === 'image') void detectStill()
 })
 
+/**
+ * segmentation mask 一直请求，不再跟着 Cutout / Cloud Rain 两个勾选框忽开忽关。
+ *
+ * `pose.load()` 会整个重建 MediaPipe 的 WASM 任务实例（close 掉旧的、await 建新的），
+ * 这中间有一段姿态检测完全拿不到结果的空档——之前云雨开关会触发这个重载，衣服就跟着
+ * 闪一下消失。mask 常驻的代价只是姿态模型多算一点，比反复重载便宜得多，也不会卡顿。
+ */
 async function reloadModel() {
   setState('loading model…')
   try {
-    await pose.load(
-      ui.model.value as ModelName,
-      ui.delegate.value as Delegate,
-      ui.segmentation.checked || ui.cloudRain.checked,
-    )
+    await pose.load(ui.model.value as ModelName, ui.delegate.value as Delegate, true)
     setState(sources.current.kind === 'none' ? 'idle' : 'running')
     if (sources.current.kind === 'image') void detectStill()
   } catch (err) {
@@ -1528,21 +1711,24 @@ async function reloadModel() {
 ui.model.addEventListener('change', () => void reloadModel())
 ui.delegate.addEventListener('change', () => void reloadModel())
 ui.segmentation.addEventListener('change', () => {
+  // 纯粹是要不要画出来的开关，mask 本来就一直在算，不用重载模型
   if (!ui.segmentation.checked) {
     segmentationEl.hidden = true
     videoEl.style.opacity = ''
     imageEl.style.opacity = ''
   }
-  void reloadModel()
 })
-ui.cloudRain.addEventListener('change', () => {
-  cloudRain.setEnabled(ui.cloudRain.checked)
-  // 特效开启时需要人物 mask 做雨滴碰撞，也需要手部模型抓住拉绳。
-  void reloadModel()
-  if (handNeeded()) void reloadHand()
-  else lastHandResult = null
+/**
+ * 桌面「羊毛雨」图标和调试勾选框共用这一个开关。手部模型是否需要跟 gesture/hand
+ * 勾选框走，不受云雨影响，这里不用管；mask 也一直在算，不用重载——纯粹切一下
+ * CloudRainEffect 自己的开关状态机就够了。
+ */
+function setCloudRainOn(on: boolean) {
+  cloudRain.setEnabled(on)
+  ui.cloudRain.checked = on
   refreshStats()
-})
+}
+ui.cloudRain.addEventListener('change', () => setCloudRainOn(ui.cloudRain.checked))
 
 function paintCloudTuning() {
   const height = Number(ui.cloudHeight.value)
@@ -1664,6 +1850,8 @@ function loop() {
   // 衣服画在骨骼之下 —— 调试时骨骼线压在衣服上，一眼看出偏了多少
   const dpr = Math.min(window.devicePixelRatio || 1, 2)
   const lms = lastResult?.landmarks?.[0]
+  syncFrameGuide(lms, Number(ui.vis.value))
+  syncFrameGuideTop(w)
   const tSec = performance.now() / 1000
 
   // 正在从文件夹飘过来的衣服自己走布料 + 渐变贴合，这一帧已经画过了，
@@ -1742,6 +1930,7 @@ function loop() {
 
   // 云雨层没有反向抵消舞台镜像，因此手势要用源画面坐标。
   const rainPinch = hands?.length ? pinch(hands, w, h) : null
+  handleCloudRainClosePinch(rainPinch)
   cloudRain.updateHand(rainPinch)
   const personMask = lastResult?.segmentationMasks?.[0]
   cloudRain.setMask(
@@ -1750,6 +1939,7 @@ function loop() {
     personMask?.height ?? 0,
   )
   cloudRain.update(now, w, h, lms)
+  syncCloudRainHints()
 
   for (const f of folders) f.tick(now, tip)
 
@@ -1777,21 +1967,9 @@ async function boot() {
 
   // ?src=/test/xxx.png 直接喂素材，跳过摄像头（调锚点 / 演示兜底用）
   const src = new URLSearchParams(location.search).get('src')
-  if (src) {
-    await sources.useUrl(src)
-    return
-  }
-
-  const ok = await sources.requestPermission()
-  await sources.refreshDevices()
-  if (ok) {
-    await openCamera()
-    return
-  }
-
-  // 没摄像头或被拒绝：退到默认场景图，页面不至于空着，也方便离线调锚点
-  await sources.useUrl(DEFAULT_SCENE)
-  panel.toggle(true)
+  await sources.useUrl(src || DEFAULT_SCENE)
+  void sources.refreshDevices()
+  // 摄像头不再开局自动要权限——默认就是参考图，要开摄像头去面板里手动选设备。
 }
 
 void boot()

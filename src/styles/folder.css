@@ -29,6 +29,8 @@
   /* 只缩图标视觉本身；--folder 仍保持原尺寸，卡片、感应区和标签都不会跟着缩放。 */
   width: calc(var(--folder) * 0.8);
   height: calc(var(--folder) * 0.8);
+  /* 图标框是方的，但不是每张图都是方的（比如云）——按比例撑满，不拉伸变形 */
+  object-fit: contain;
   /* 居中由 GSAP 的 xPercent/yPercent 做，这里不能再写 transform */
   /* 文件夹压在衣服之上，衣服才像是从里面探出来的 */
   z-index: 2;
@@ -67,6 +69,52 @@
   height: calc(var(--folder) * 0.13);
   border-radius: var(--radius-full);
   background: var(--color-accent);
+}
+/* 名字 + 品牌名两行堆叠，圆点跟整块一起垂直居中 */
+.folder-label-text {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--folder) * 0.02);
+}
+.folder-label-brand {
+  font-size: 0.76em;
+  font-weight: 400;
+  opacity: 0.8;
+}
+
+/*
+ * ── 悬浮引导小标签 ───────────────────────────────────────────
+ * 极简交互提示：手指/鼠标停在某个可交互点附近才淡入，离开就收起，不常驻、
+ * 不挡热区（pointer-events:none）。胶囊底 + 白字，和 #palm-badge 是同一套视觉。
+ */
+.hint-tag {
+  position: absolute;
+  z-index: 6;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-ink-50);
+  font-size: 10px;
+  line-height: 1.3;
+  color: var(--color-cut-white);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  user-select: none;
+  transition: opacity var(--motion-fast) linear;
+}
+.hint-tag.is-on { opacity: 1; }
+
+/* 挂在文件夹图标正上方，指向/悬停关闭态的图标时出现 */
+.folder-icon-hint {
+  left: 0;
+  top: calc(var(--folder) * -0.56);
+  transform: translate(-50%, 0);
+}
+
+/* 挂在文件夹展开区域附近，停留在某张卡片上时出现（位置由 JS 按卡片算，见 wardrobe-folder.ts） */
+.folder-card-hint {
+  left: 0;
+  top: 0;
 }
 
 /* ── 扇出来的四张卡 ─────────────────────────────────────────── */
@@ -203,31 +251,46 @@
 
 /* ── 张掌换装：解锁后的常驻提示条 ─────────────────────────────
  * 举稳 1.5 秒解锁后出现，告诉人「现在歪一下能换衣服，左上右下」。
+ * 贴在手上方（大概中指位置），位置由 JS 每帧跟着手算（main.ts handleQuickChange）。
  * 每次真的触发一次换装，对应那侧的字会弹一下（JS 里 gsap 单独控制）。
  */
+/* 结构（左右两侧文案分开弹）是自己的，其余胶囊视觉交给 .hint-tag 基类 */
 #palm-badge {
+  left: 0;
+  top: 0;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding: 5px 14px;
+  font-family: var(--font-family);
+}
+#palm-badge .side { display: inline-block; }
+
+/* 还没举稳的待命提示，位置由 JS 跟着停留进度环一起算（main.ts showPalmRing） */
+.palm-arm-hint {
+  left: 0;
+  top: 0;
+}
+
+/* ── 主题赛道词语 ───────────────────────────────────────────────
+ * 上衣下装凑成同一个主题整套时，在顶部偏下一点的位置居中亮出来，提示这是
+ * 「成套」——不用太大，别喧宾夺主。出现/收起的掉落动画交给 GSAP（main.ts 里
+ * 的 syncThemeTagline），这里不写 transform/opacity 的静态值和 transition，
+ * 免得和 gsap 的 inline style 打架。
+ */
+#theme-tagline {
   position: absolute;
   left: 50%;
-  top: 6%;
+  top: 4%;
   z-index: 8;
-  transform: translate(-50%, 0);
-  display: flex;
-  gap: 20px;
-  align-items: center;
-  padding: 8px 20px;
-  border-radius: var(--radius-full);
-  background: var(--color-ink-50);
-  font-family: var(--font-family);
-  font-size: 14px;
-  color: var(--color-cut-white);
-  text-shadow: 0 1px 6px var(--color-cut-shadow);
-  opacity: 0;
+  width: 15%;
+  min-width: 140px;
+  max-width: 220px;
+  height: auto;
   pointer-events: none;
   user-select: none;
-  transition: opacity var(--motion-fast) linear;
+  filter: drop-shadow(0 2px 10px var(--color-cut-shadow));
 }
-#palm-badge.is-on { opacity: 1; }
-#palm-badge .side { display: inline-block; }
 
 /* ── 快门闪白 ───────────────────────────────────────────────── */
 #flash {

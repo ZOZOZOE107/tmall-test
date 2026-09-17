@@ -63,6 +63,104 @@ html, body {
 #src-video[hidden], #src-image[hidden], #segmentation[hidden] { display: none; }
 #overlay { pointer-events: none; }
 
+/* ── 活动标题：左右上角，图来自 Figma 6:222，钉死在视口不随取景挪动 ── */
+.corner-title {
+  position: absolute;
+  top: 3%;
+  z-index: 5;
+  height: auto;
+  pointer-events: none;
+  user-select: none;
+}
+#brand-badge {
+  left: 2.5%;
+  width: 17%;
+  max-width: 260px;
+}
+#campaign-title.is-right {
+  right: 2%;
+  width: 12%;
+  max-width: 190px;
+  transform: scale(1.3);
+  transform-origin: top right;
+}
+
+/* ── 右下角小 logo：冒号那两个点当眼睛，轮流眨一下 ───────────────── */
+#corner-logo {
+  position: absolute;
+  right: 2%;
+  bottom: 2%;
+  z-index: 5;
+  width: 6%;
+  min-width: 28px;
+  max-width: 44px;
+  height: auto;
+  pointer-events: none;
+  user-select: none;
+}
+/* transform-box:fill-box 让 scaleY 绕图形自己的中心缩，不用手算坐标 */
+.logo-eye {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: logo-blink 4.8s ease-in-out infinite;
+}
+@keyframes logo-blink {
+  0%, 4%, 8%, 100% { transform: scaleY(1); }
+  2%, 6% { transform: scaleY(0.12); }
+}
+
+/*
+ * 左边那个「A」笔画：用户在 Figma 里重新画成单条描边路径（不是原来的丝带
+ * 填色轮廓），配了原生的 path-trim 动画——沿着这条路径本身画出来/收回去，
+ * 不是直线擦过，也不会有丝带两条边不同步的问题。动画参数原样照抄 Figma
+ * 导出的关键帧（get_motion_context 给的 CSS snippet），pathLength="1" 让
+ * dasharray/dashoffset 直接按 0~1 的比例写，不用再量真实像素周长。
+ */
+.logo-mark {
+  stroke-dashoffset: 0;
+  animation: kf-logo-mark-trim 2.529011s linear infinite alternate;
+}
+@keyframes kf-logo-mark-trim {
+  0% { stroke-dasharray: 0 1; visibility: hidden; }
+  18.771% { animation-timing-function: ease-out; stroke-dasharray: 0 1; visibility: hidden; }
+  81.414% { stroke-dasharray: 1 1; visibility: visible; }
+  100% { stroke-dasharray: 1 1; visibility: visible; }
+}
+
+/*
+ * 站位引导框：髋部（23/24 号点）没识别到时出现，提示人往框里站。超细虚线，
+ * 文字贴在框内上沿，不挂在框外面。不接鼠标——纯提示，不挡任何交互。
+ *
+ * 框的比例锁定成「人体」的高宽比，不是页面的高宽比 —— 上下边界卡在赛道词语
+ * 下面一点／页面底部上来一点，左右宽度用 aspect-ratio 按这个高度反算，人站
+ * 多宽的画面里框都不会跟着变形。
+ */
+#frame-guide {
+  position: absolute;
+  left: 50%;
+  top: 22%;
+  bottom: 4%;
+  transform: translateX(-50%);
+  aspect-ratio: 3 / 8;
+  z-index: 4;
+  border: 1px dashed var(--color-tmall-red);
+  opacity: 0;
+  pointer-events: none;
+  user-select: none;
+  transition: opacity var(--motion-fast) linear;
+}
+#frame-guide.is-on { opacity: 0.85; }
+#frame-guide-label {
+  position: absolute;
+  left: 50%;
+  top: 12px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: var(--dev-font-sm, 13px);
+  color: var(--color-tmall-red);
+  text-shadow: 0 1px 6px var(--color-cut-shadow);
+}
+
 #boot-hint {
   position: absolute;
   left: 50%; top: 50%;

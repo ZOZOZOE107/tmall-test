@@ -252,7 +252,7 @@
     },
     {
       "id": "editor",
-      "name": "温感随行",
+      "name": "织造美学",
       "scene": "约会看展",
       "brand": "MO&Co.",
       "tagline": "不追趋势，负责编辑趋势",
@@ -563,7 +563,7 @@
     },
     {
       "id": "homebody",
-      "name": "织造美学",
+      "name": "轻护无忧",
       "scene": "居家生活",
       "brand": "优衣库 & Ubras",
       "tagline": "舒服不是退让，是一种选择",
@@ -859,7 +859,7 @@
     },
     {
       "id": "outdoor",
-      "name": "轻护无忧",
+      "name": "温感随行",
       "scene": "城野户外",
       "brand": "Navigare 纳维凯尔",
       "tagline": "今天的路线：从城市到风里",

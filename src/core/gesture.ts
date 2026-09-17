@@ -15,6 +15,7 @@ const IDX_MCP = 5
 const IDX_PIP = 6
 const IDX_TIP = 8
 const MID_MCP = 9
+const MID_TIP = 12
 /** 中指、无名指、小指的 [第二关节, 指尖] */
 const OTHERS: Array<[number, number]> = [
   [10, 12],
@@ -32,6 +33,8 @@ export interface OpenPalmPose {
   angle: number
   /** 手腕点，已经按镜像换算过 —— 举稳进度环直接拿这个点定位，不用再自己翻一次 */
   at: V2
+  /** 中指指尖，已按镜像换算过 —— 解锁后的提示条贴着手上方，用这个点比手腕准 */
+  mid: V2
 }
 
 const dist = (a: V2, b: V2) => Math.hypot(a.x - b.x, a.y - b.y)
@@ -122,7 +125,7 @@ export function openPalmTilt(
 
     const dx = middle.x - wrist.x
     const dy = wrist.y - middle.y
-    return { angle: Math.atan2(dx, dy) * 180 / Math.PI, at: wrist }
+    return { angle: Math.atan2(dx, dy) * 180 / Math.PI, at: wrist, mid: P(MID_TIP) }
   }
   return null
 }
