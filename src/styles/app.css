@@ -173,6 +173,63 @@ html, body {
 }
 #boot-hint.is-hidden { opacity: 0; }
 
+/*
+ * 加载页：盖住整个 #viewport（不挂在 #stage/#props 下面 —— 那两个在模型下载
+ * 完之前尺寸都是 0，镜像 transform 也还没定，扛不住这层东西）。
+ * AI 模型（pose/hand .task）下载完、第一帧画面能看见了才收起，见 main.ts boot()。
+ * z-index 得比 #dev-panel（100）还高——调试面板要是上次刷新前忘了关，
+ * 不能在加载完成之前就露出来盖在这上面。
+ */
+#loading-screen {
+  position: absolute;
+  inset: 0;
+  z-index: 101;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  background: var(--color-bg);
+  transition: opacity var(--motion-base) var(--motion-easing);
+}
+#loading-screen.is-hidden { opacity: 0; pointer-events: none; }
+
+#loading-logo {
+  width: 15%;
+  min-width: 64px;
+  max-width: 96px;
+  height: auto;
+}
+/*
+ * 复用 #corner-logo 那套「A」笔画描边 + 眨眼动画（.logo-eye / .logo-mark），
+ * 放大版本不用另写关键帧。中间那条「AOE Studio」文字是矢量描出来的路径，
+ * 没有 class，直接内联 fill="white"——原来是给右下角小 logo 压在深色实拍
+ * 画面上用的，搬到浅色加载页背景上必须一起改黑，不然会看不清。
+ */
+#loading-logo .logo-mark { stroke: var(--color-ink); }
+#loading-logo .logo-eye { fill: var(--color-ink); }
+#loading-logo path:not(.logo-eye):not(.logo-mark) { fill: var(--color-ink); }
+
+#loading-bar {
+  width: 180px;
+  height: 3px;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--color-ink) 15%, transparent);
+  overflow: hidden;
+}
+#loading-bar-fill {
+  width: 0%;
+  height: 100%;
+  background: var(--color-ink);
+  transition: width 0.15s linear;
+}
+#loading-pct {
+  font-size: var(--dev-font-sm);
+  letter-spacing: var(--dev-letter-spacing-wide);
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
 /* ═══ 开发工具栏 ═══════════════════════════════════════════════
    正式皮肤上线后这一整段连同 dev-tokens.css 一起删掉。
    ═══════════════════════════════════════════════════════════ */

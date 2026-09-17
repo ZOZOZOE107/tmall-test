@@ -5,6 +5,7 @@
  */
 import { HandLandmarker, type HandLandmarkerResult } from '@mediapipe/tasks-vision'
 import { getFileset } from './vision'
+import { fetchWithProgress } from './progress'
 import type { Delegate } from './pose'
 
 const MODEL_PATH = '/models/hand_landmarker.task'
@@ -19,16 +20,26 @@ export class HandEngine {
   ready = false
   inferMs = 0
 
-  async load(numHands = this.numHands, delegate: Delegate = this.delegate): Promise<void> {
+  async load(
+    numHands = this.numHands,
+    delegate: Delegate = this.delegate,
+    /** 传了就手动下载模型文件量真实字节进度，不传就照旧交给库自己 fetch */
+    onProgress?: (loaded: number, total: number) => void,
+  ): Promise<void> {
     this.ready = false
     this.numHands = numHands
     this.delegate = delegate
 
-    const fileset = await getFileset()
+    const [fileset, modelAssetBuffer] = await Promise.all([
+      getFileset(),
+      onProgress
+        ? fetchWithProgress(MODEL_PATH, onProgress).then((buf) => new Uint8Array(buf))
+        : Promise.resolve(undefined),
+    ])
 
     this.landmarker?.close()
     this.landmarker = await HandLandmarker.createFromOptions(fileset as never, {
-      baseOptions: { modelAssetPath: MODEL_PATH, delegate },
+      baseOptions: modelAssetBuffer ? { modelAssetBuffer, delegate } : { modelAssetPath: MODEL_PATH, delegate },
       runningMode: this.runningMode,
       numHands,
       minHandDetectionConfidence: 0.5,

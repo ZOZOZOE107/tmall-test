@@ -4,6 +4,7 @@
  */
 import { PoseLandmarker, type PoseLandmarkerResult } from '@mediapipe/tasks-vision'
 import { getFileset } from './vision'
+import { fetchWithProgress } from './progress'
 
 export type ModelName = 'lite' | 'full' | 'heavy'
 export type Delegate = 'GPU' | 'CPU'
@@ -30,20 +31,26 @@ export class PoseEngine {
     model: ModelName = this.model,
     delegate: Delegate = this.delegate,
     segmentation = this.segmentation,
+    /** 传了就手动下载模型文件量真实字节进度，不传就照旧交给库自己 fetch */
+    onProgress?: (loaded: number, total: number) => void,
   ): Promise<void> {
     this.ready = false
     this.model = model
     this.delegate = delegate
     this.segmentation = segmentation
 
-    const fileset = await getFileset()
+    const [fileset, modelAssetBuffer] = await Promise.all([
+      getFileset(),
+      onProgress
+        ? fetchWithProgress(MODEL_PATH[model], onProgress).then((buf) => new Uint8Array(buf))
+        : Promise.resolve(undefined),
+    ])
 
     this.landmarker?.close()
     this.landmarker = await PoseLandmarker.createFromOptions(fileset as never, {
-      baseOptions: {
-        modelAssetPath: MODEL_PATH[model],
-        delegate,
-      },
+      baseOptions: modelAssetBuffer
+        ? { modelAssetBuffer, delegate }
+        : { modelAssetPath: MODEL_PATH[model], delegate },
       runningMode: this.runningMode,
       numPoses: 1, // 多人入镜时只追一个，规则见工作台 4.5「园区横屏规则」
       minPoseDetectionConfidence: 0.5,

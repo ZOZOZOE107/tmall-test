@@ -34,6 +34,20 @@ function syncFrameGuide(lms: { visibility?: number }[] | undefined, minVisibilit
   frameGuideEl.classList.toggle('is-on', !hipsOk)
 }
 const bootHint = $('boot-hint')
+const loadingScreen = $('loading-screen')
+const loadingBarFill = $('loading-bar-fill')
+const loadingPct = $('loading-pct')
+
+/** AI 模型下载进度条，0~1。boot() 里按 pose/hand 两个模型文件的真实字节数加权算 */
+function setLoadingProgress(fraction: number) {
+  const pct = Math.round(Math.min(1, Math.max(0, fraction)) * 100)
+  loadingBarFill.style.width = `${pct}%`
+  loadingPct.textContent = `${pct}%`
+}
+function hideLoadingScreen() {
+  setLoadingProgress(1)
+  loadingScreen.classList.add('is-hidden')
+}
 
 const ui = {
   device: $<HTMLSelectElement>('dev-device'),
@@ -1697,10 +1711,10 @@ ui.vis.addEventListener('input', () => {
  * 这中间有一段姿态检测完全拿不到结果的空档——之前云雨开关会触发这个重载，衣服就跟着
  * 闪一下消失。mask 常驻的代价只是姿态模型多算一点，比反复重载便宜得多，也不会卡顿。
  */
-async function reloadModel() {
+async function reloadModel(onProgress?: (loaded: number, total: number) => void) {
   setState('loading model…')
   try {
-    await pose.load(ui.model.value as ModelName, ui.delegate.value as Delegate, true)
+    await pose.load(ui.model.value as ModelName, ui.delegate.value as Delegate, true, onProgress)
     setState(sources.current.kind === 'none' ? 'idle' : 'running')
     if (sources.current.kind === 'image') void detectStill()
   } catch (err) {
@@ -1747,10 +1761,10 @@ paintCloudTuning()
 ui.cloudHeight.addEventListener('input', paintCloudTuning)
 ui.cloudSize.addEventListener('input', paintCloudTuning)
 
-async function reloadHand() {
+async function reloadHand(onProgress?: (loaded: number, total: number) => void) {
   if (!handNeeded()) return
   try {
-    await hand.load(Number(ui.handNum.value), ui.handDelegate.value as Delegate)
+    await hand.load(Number(ui.handNum.value), ui.handDelegate.value as Delegate, onProgress)
     if (sources.current.kind === 'image') void detectStill()
   } catch (err) {
     setState('hand model failed', true)
@@ -1954,12 +1968,37 @@ function loop() {
 
 /* ── 启动 ────────────────────────────────────────────────────── */
 
+/**
+ * 权重只用来算加载条走多快，不是真的字节数——真实字节数在下载时从
+ * Content-Length 读，这里只是「pose 模型比 hand 模型占加载条几成」的估算，
+ * 跟 public/models 里当前几个 .task 文件的实际大小对得上就行。
+ */
+const POSE_MODEL_WEIGHT: Record<ModelName, number> = {
+  lite: 5_777_746,
+  full: 9_398_198,
+  heavy: 30_664_242,
+}
+const HAND_MODEL_WEIGHT = 7_819_105
+
 async function boot() {
   refreshStats()
   requestAnimationFrame(loop)
 
-  await reloadModel()
-  await reloadHand()
+  const needHand = handNeeded()
+  const poseWeight = POSE_MODEL_WEIGHT[ui.model.value as ModelName] ?? POSE_MODEL_WEIGHT.lite
+  const totalWeight = poseWeight + (needHand ? HAND_MODEL_WEIGHT : 0)
+  let poseLoaded = 0
+  let handLoaded = 0
+  const paintLoading = () => setLoadingProgress((poseLoaded + handLoaded) / totalWeight)
+
+  await reloadModel((loaded, total) => {
+    poseLoaded = total ? (loaded / total) * poseWeight : poseWeight
+    paintLoading()
+  })
+  await reloadHand((loaded, total) => {
+    handLoaded = total ? (loaded / total) * HAND_MODEL_WEIGHT : HAND_MODEL_WEIGHT
+    paintLoading()
+  })
   garment.load().catch((e) => console.warn(e))
   const { theme, look } = lookFromQuery()
   void loadLook(theme, look)
@@ -1970,6 +2009,7 @@ async function boot() {
   await sources.useUrl(src || DEFAULT_SCENE)
   void sources.refreshDevices()
   // 摄像头不再开局自动要权限——默认就是参考图，要开摄像头去面板里手动选设备。
+  hideLoadingScreen()
 }
 
 void boot()
