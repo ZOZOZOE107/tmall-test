@@ -61,6 +61,15 @@ const ART_PAD = 0.04
 /** 碰到图标时缩到多大。8% 够看出「被按下去了」，又不至于让图标跳一下 */
 const TOUCH_SCALE = 0.92
 
+/**
+ * --folder 的像素上下限。size 是「占舞台宽度的比例」，但舞台宽度本身会被
+ * Fit Best 的letterbox/pillarbox 挤压——同样判成 portrait，长宽比稍微一变，
+ * 舞台内容宽度就可能腰斩或翻倍，图标跟着忽大忽小。夹一个绝对像素范围兜底，
+ * 中间正常尺寸不受影响，只在极端比例下托底/封顶。
+ */
+const FOLDER_MIN_PX = 56
+const FOLDER_MAX_PX = 70
+
 interface IconMask {
   /** ALPHA_GRID² 个 alpha 采样，按行存 */
   a: Uint8ClampedArray
@@ -514,11 +523,20 @@ export class WardrobeFolder {
     if (this.open) this.placeCards()
   }
 
+  /**
+   * --folder 的实际像素值，夹了上下限（见 FOLDER_MIN_PX/MAX_PX）。所有跟
+   * 图标尺寸相关的计算（热区、判定半径……）都要走这个，不能各自现算
+   * this.opts.size * w，否则视觉尺寸和交互判定会对不上。
+   */
+  private folderSize(w: number): number {
+    return Math.min(FOLDER_MAX_PX, Math.max(FOLDER_MIN_PX, this.opts.size * w))
+  }
+
   /** 舞台尺寸变了要重新摆位，每帧调一次也不贵 */
   layout() {
     const { w, h } = this.opts.stageSize()
     if (!w || !h) return
-    const size = this.opts.size * w
+    const size = this.folderSize(w)
     this.root.style.setProperty('--folder', `${size}px`)
     this.root.style.left = `${this.at.x * w}px`
     this.root.style.top = `${this.at.y * h}px`
@@ -657,7 +675,7 @@ export class WardrobeFolder {
    * 透明边不算进来 —— 这块矩形就是「图标本身」。
    */
   private artBox(w: number, h: number) {
-    const d = this.opts.size * w * ICON_DRAW
+    const d = this.folderSize(w) * ICON_DRAW
     const x0 = this.at.x * w - d / 2
     const y0 = this.at.y * h - d / 2
     const b = masks.get(this.iconSrc)?.box
@@ -670,7 +688,7 @@ export class WardrobeFolder {
    * @param slack 宽容量的倍数。碰上之后判离开时给得松一点，边界上抖动才不会反复触发
    */
   private onArt(p: V2, w: number, h: number, slack = 1): boolean {
-    const pad = this.opts.size * w * ART_PAD * slack
+    const pad = this.folderSize(w) * ART_PAD * slack
     const b = this.artBox(w, h)
     return p.x > b.x0 - pad && p.x < b.x1 + pad && p.y > b.y0 - pad && p.y < b.y1 + pad
   }
@@ -697,7 +715,7 @@ export class WardrobeFolder {
   /** 展开之后整片扇形都算「在文件夹身上」，不然光标往上够卡片的路上就收了 */
   private inFanZone(p: V2, w: number, h: number): boolean {
     if (!this.fan.length) return false
-    const s = this.opts.size * w
+    const s = this.folderSize(w)
     const cx = this.at.x * w
     const cy = this.at.y * h
     return Math.abs(p.x - cx) < s * 1.45 && p.y > cy - s * 2.05 && p.y < cy + s * 1.05
@@ -725,11 +743,11 @@ export class WardrobeFolder {
     const { w, h } = this.opts.stageSize()
     if (!w || !h) return Infinity
     if (!this.engaged(p, w, h)) return Infinity
-    return Math.hypot(p.x - this.at.x * w, p.y - this.at.y * h) / (this.opts.size * w)
+    return Math.hypot(p.x - this.at.x * w, p.y - this.at.y * h) / (this.folderSize(w))
   }
 
   private cardCenter(i: number, w: number, h: number): V2 {
-    const s = this.opts.size * w
+    const s = this.folderSize(w)
     return { x: this.at.x * w + this.fan[i].x * s, y: this.at.y * h + this.fan[i].y * s }
   }
 
@@ -792,7 +810,7 @@ export class WardrobeFolder {
     const move = (e: PointerEvent) => {
       const { w: sw, h: sh } = this.opts.stageSize()
       const p = this.opts.toLocal(e.clientX, e.clientY)
-      const s = this.opts.size * sw
+      const s = this.folderSize(sw)
       const { up, down, left, right } = this.extent()
       const cl = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v))
       this.at = {
@@ -849,7 +867,7 @@ export class WardrobeFolder {
   hitIcon(p: V2): boolean {
     const { w, h } = this.opts.stageSize()
     if (!w || !h) return false
-    const s = this.opts.size * w
+    const s = this.folderSize(w)
     return Math.hypot(p.x - this.at.x * w, p.y - this.at.y * h) < s * 0.65
   }
 
@@ -858,7 +876,7 @@ export class WardrobeFolder {
    * 才像是这件衣服自己的东西；一律摆正上方的话，左右两端那两张会觉得环挂错了。
    */
   private ringSpot(i: number, w: number, h: number): V2 {
-    const s = this.opts.size * w
+    const s = this.folderSize(w)
     const f = this.fan[i]
     const c = this.cardCenter(i, w, h)
     // 卡片绕自身转过 rot 之后，它的「上」方向
@@ -874,7 +892,7 @@ export class WardrobeFolder {
   /** 光标落在哪张卡上。手会抖，判定范围给得比卡本身松一圈 */
   private aimAt(p: V2, w: number, h: number): number {
     if (!this.open) return -1
-    const s = this.opts.size * w
+    const s = this.folderSize(w)
     let best = -1
     let bestD = Infinity
     for (let i = 0; i < this.cards.length; i++) {
@@ -970,7 +988,7 @@ export class WardrobeFolder {
    */
   private flyToBody(i: number, piece: FolderPiece) {
     const { w, h } = this.opts.stageSize()
-    const s = this.opts.size * w
+    const s = this.folderSize(w)
     // 先把原小图立即拿掉，再生成布料；并在整段飞行动画期间把它排除在扇形布局外。
     // 否则手指还停在文件夹上时，下一帧自动展开会把刚隐藏的卡片重新显示出来。
     this.fly?.kill()
