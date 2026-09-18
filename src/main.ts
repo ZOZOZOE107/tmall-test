@@ -587,7 +587,7 @@ async function snapshot(w: number, h: number) {
   try {
     const background = ui.segmentation.checked && !segmentationEl.hidden ? segmentationEl : src.el
     g.drawImage(background as CanvasImageSource, 0, 0, c.width, c.height)
-    for (const layer of [layerBottom, layerTop, layerTape]) {
+    for (const layer of [layerBottom, layerTop, layerTape, layerCloudRain]) {
       g.drawImage(layer, 0, 0, c.width, c.height)
     }
   } catch (e) {
