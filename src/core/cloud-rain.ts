@@ -95,6 +95,9 @@ export class CloudRainEffect {
       ? clamp((now - this.phaseStartAt) / this.SLIDE_MS, 0, 1)
       : this.phaseT
     if (on) {
+      // 云一打开就自己下雨，不用再靠拉绳子起步——绳子还在，开着之后拉一下
+      // 照样能停/再开，走的是 pullTo() 里那条切换逻辑，这里只管「开了就下」
+      this.raining = true
       if (this.phase === 'closed') {
         this.phase = 'opening'
         this.phaseStartAt = now
