@@ -333,7 +333,19 @@ export interface FolderOptions {
   onWear: (piece: FolderPiece, from: { x: number; y: number; w: number; h: number }) => void
   /** photo / trash 模式下停满时调。photo 给的是照片下标，trash 给的是身上那件 */
   onDelete?: (piece: FolderPiece, index: number) => void
+  /**
+   * 手指/光标压在图标本身（不是扇形卡片）上满 3 秒才触发，和 mode 的停留删除是两套独立计时。
+   * `ready()` 每帧都会问——只有它返回 true 才开始计时、才会显示进度环；返回 false 时
+   * （比如照片没攒够 4 张）摸多久都没反应，不单独提示「还差几张」。
+   */
+  onIconDwell?: {
+    ready: () => boolean
+    fire: () => void
+  }
 }
+
+/** 长按图标触发 onIconDwell 要多久 */
+const ICON_DWELL_MS = 3000
 
 export class WardrobeFolder {
   private root: HTMLElement
@@ -387,6 +399,11 @@ export class WardrobeFolder {
   private aimLostAt = 0
   /** 刚穿上的那件。光标离开它之前不再重新计时，否则会连着穿好几次 */
   private lockIndex = -1
+
+  /** 长按图标（onIconDwell）计时。0 = 没在数 */
+  private iconDwellFrom = 0
+  /** 这一次按住已经触发过了，按住不放也不再重复发 */
+  private iconDwellFired = false
 
   constructor(opts: FolderOptions) {
     this.opts = opts
@@ -1054,6 +1071,34 @@ export class WardrobeFolder {
 
     this.setOpen(inside)
     if (this.open) this.aim(p, now, w, h)
+    if (this.opts.onIconDwell) this.tickIconDwell(p, now, w, h)
+  }
+
+  /**
+   * 长按图标满 3 秒触发一次性动作（比如「我的Wool人格」攒满 4 张后的打印）。
+   * 和 aim() 的卡片停留计时是两条独立的线——这条只认「压在图标本身上」，
+   * 扇形有没有展开、光标有没有顺带落在某张卡上都不管。
+   */
+  private tickIconDwell(p: V2, now: number, w: number, h: number) {
+    const spec = this.opts.onIconDwell!
+    const onIcon = this.onArt(p, w, h, this.touched ? 2.5 : 1) && spec.ready()
+    if (!onIcon) {
+      if (this.iconDwellFrom) this.hideRing()
+      this.iconDwellFrom = 0
+      this.iconDwellFired = false
+      return
+    }
+    if (!this.iconDwellFrom) {
+      this.iconDwellFrom = now
+      this.iconDwellFired = false
+      this.ring.style.setProperty('--dwell', `${ICON_DWELL_MS}ms`)
+      this.showRing({ x: this.at.x * w, y: this.at.y * h })
+    }
+    if (!this.iconDwellFired && now - this.iconDwellFrom >= ICON_DWELL_MS) {
+      this.iconDwellFired = true
+      this.hideRing()
+      spec.fire()
+    }
   }
 
   destroy() {

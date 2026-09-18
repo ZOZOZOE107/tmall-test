@@ -329,3 +329,84 @@
   object-fit: contain;
   filter: drop-shadow(0 6px 16px var(--color-cut-shadow));
 }
+
+/* ── 「我的Wool人格」攒满 4 张，长按图标后整台取物机跳到画面中间打印 ──
+ * 机身（.print-machine）是 Figma 里那张取物机原图，铺满 #persona-print。
+ * 取物槽（.print-slot）卡在机身对应的取物口位置，本体是掩体：overflow
+ * hidden，只有 height 被 GSAP 动，越长露出的相纸越多。相纸（.print-sheet）
+ * 钉死在掩体顶部，高度写死不跟着变，靠掩体的 height 决定看得见多少——
+ * 这样相纸不用自己挪位置，纯靠遮挡就是「从缝里吐出来」的错觉。
+ */
+#persona-print {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 9;
+  pointer-events: none;
+  user-select: none;
+}
+.print-machine {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  filter: drop-shadow(0 16px 40px var(--color-cut-shadow));
+}
+.print-slot {
+  position: absolute;
+  overflow: hidden;
+}
+.print-sheet {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  aspect-ratio: 500 / 711;
+}
+.print-paper {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.print-sheet .cell {
+  position: absolute;
+  object-fit: cover;
+  display: block;
+}
+
+/*
+ * 左上角的关闭叉。机身其余部分 pointer-events: none（不挡后面的人），
+ * 这颗按钮自己开 auto，鼠标能直接点；手势没有「点」这个动作，靠
+ * tickPersonaPrintClose() 算指尖停留，is-armed 只是「正压着」的视觉反馈，
+ * 真正触发在 JS 里判，不在这条 transition 上。
+ */
+.print-close {
+  position: absolute;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: none;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-cut-white);
+  box-shadow: 0 6px 18px var(--color-cut-shadow);
+  cursor: pointer;
+  pointer-events: auto;
+  transition: transform 0.15s ease;
+}
+.print-close:hover,
+.print-close.is-armed {
+  transform: scale(1.12);
+}
+.print-close svg {
+  width: 46%;
+  height: 46%;
+  stroke: var(--color-ink);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  fill: none;
+}

@@ -255,7 +255,7 @@ const THEME_ICON: Record<string, string> = {
 
 const DESK_ICONS: Array<{ id: string; label: string; icon: string; dot?: string; iconHint?: string; cardHint?: string }> = [
   { id: 'trash', label: '废纸篓', icon: '/assets/icon-trash-full.png', cardHint: '停留脱下' },
-  { id: 'screenshot', label: '截屏', icon: '/assets/icon-screenshot-macos.png', iconHint: '点/捏两下拍照' },
+  { id: 'screenshot', label: '截屏', icon: '/assets/icon-screenshot-macos.png', iconHint: '点击或停留 3 秒拍照' },
   { id: 'wool-rain', label: '羊毛雨', icon: '/assets/cloud.png', dot: '#ffffff', iconHint: '点/捏两下开关' },
 ]
 
@@ -349,6 +349,12 @@ function handleCloudRainClick(clientX: number, clientY: number, srcPoint: { x: n
   }
 }
 
+/** 点在截屏图标上 → 直接起倒计时，和长按 3 秒是并列的两条路，谁先到算谁的 */
+function handleScreenshotClick(clientX: number, clientY: number) {
+  const icon = folders.find((f) => f.id === 'screenshot')
+  if (icon?.hitIcon(toProps(clientX, clientY))) startCountdown(performance.now())
+}
+
 /** 捏合的上升沿落在云上面 → 只关，不用捏两下（已经在眼前了，不用防误触） */
 let cloudClosePinchWasOn = false
 function handleCloudRainClosePinch(p: { x: number; y: number } | null) {
@@ -367,6 +373,7 @@ for (const type of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel'] 
       if (type === 'pointerdown') {
         cloudRain.pointerDown(p)
         handleCloudRainClick(event.clientX, event.clientY, p)
+        handleScreenshotClick(event.clientX, event.clientY)
       } else if (type === 'pointermove') cloudRain.pointerMove(p)
       else cloudRain.pointerUp()
     },
@@ -383,6 +390,7 @@ for (const type of ['mousedown', 'mousemove', 'mouseup'] as const) {
       if (type === 'mousedown') {
         cloudRain.pointerDown(p)
         handleCloudRainClick(event.clientX, event.clientY, p)
+        handleScreenshotClick(event.clientX, event.clientY)
       } else if (type === 'mousemove') cloudRain.pointerMove(p)
       else cloudRain.pointerUp()
     },
@@ -470,11 +478,10 @@ function drawTapes(now: number, w: number, h: number, lms?: NormalizedLandmark[]
  * 另一件保持不动，所以可以跨 look 混搭。
  */
 /* ── 截屏 ───────────────────────────────────────────────────────
- * 捏合两下 → 倒数 3 秒 → 抓一张，存进「我的Wool人格」。
+ * 点击图标，或者食指指着它停满 3 秒 → 倒数 3 秒 → 抓一张，存进「我的Wool人格」。
+ * 不再要求捏两下——捏合手势识别没有点按稳，点击/停留两条路都比它更好上手。
  */
 
-/** 两次捏合间隔在这以内才算「捏了两下」 */
-const DOUBLE_PINCH_MS = 700
 /** 倒计时长度 */
 const COUNTDOWN_MS = 3000
 /** 最多存几张，超了丢最早那张 */
@@ -483,11 +490,14 @@ const MAX_SHOTS = 4
 const FLY_INTO_MS = 720
 
 let pinchWasOn = false
-let lastPinchAt = 0
 let countdownUntil = 0
 let captureNext = false
-/** 「羊毛雨」图标捏两下开关用的独立计时，不跟截屏那个抢 */
+/** 倒计时上一次报的数。变了才播一次「嘀」，不然每帧重播就成蜂鸣了 */
+let lastCountdownTick = 0
+/** 「羊毛雨」图标捏两下开关用的独立计时 */
 let lastCloudIconPinchAt = 0
+/** 两次捏合间隔在这以内才算「捏了两下」——现在只有羊毛雨开关还用 */
+const DOUBLE_PINCH_MS = 700
 
 interface Shot {
   id: string
@@ -499,11 +509,23 @@ const countdownEl = document.createElement('div')
 countdownEl.id = 'countdown'
 propsEl.append(countdownEl)
 
+/** 点击截屏图标，或者点它停满 3 秒，都从这条路起倒计时——只在没已经在倒数时生效 */
+function startCountdown(now: number) {
+  if (countdownUntil) return
+  countdownUntil = now + COUNTDOWN_MS
+  lastCountdownTick = 0
+  playReadyChime()
+}
+
 function showCountdown(n: number) {
   if (countdownEl.textContent === String(n)) return
   countdownEl.textContent = String(n)
   countdownEl.classList.add('is-on')
-  // 每跳一个数重播一次，才有「咔、咔、咔」的节奏
+  // 每跳一个数重播一次，才有「咔、咔、咔」的节奏；声音跟着一起跳，数字越小声调越高
+  if (n !== lastCountdownTick) {
+    lastCountdownTick = n
+    playCountdownTick(n)
+  }
   gsap.fromTo(
     countdownEl,
     { scale: 1.35, opacity: 0 },
@@ -517,22 +539,10 @@ function hideCountdown() {
   gsap.killTweensOf(countdownEl)
 }
 
-/** 捏合的上升沿落在截屏图标上，而且和上一次挨得够近 → 起倒计时 */
+/** 「羊毛雨」图标还是捏两下开关，和截屏分开维护 */
 function handlePinch(p: { x: number; y: number } | null, now: number) {
   const on = !!p
   const risingEdge = on && !pinchWasOn && !!p
-  if (risingEdge && !countdownUntil) {
-    const shutter = folders.find((f) => f.id === 'screenshot')
-    if (shutter?.hitIcon(p!)) {
-      if (now - lastPinchAt < DOUBLE_PINCH_MS) {
-        lastPinchAt = 0
-        countdownUntil = now + COUNTDOWN_MS
-      } else {
-        lastPinchAt = now
-      }
-    }
-  }
-  // 「羊毛雨」图标捏两下 → 开关切换。跟截屏共用捏合信号，但计时和判定各自独立
   if (risingEdge) {
     const rainIcon = folders.find((f) => f.id === 'wool-rain')
     if (rainIcon?.hitIcon(p!)) {
@@ -655,6 +665,90 @@ function playShutter() {
   }
 }
 
+/** 一声干净的正弦「嘀」，倒计时的每一跳、起手的提示音都拿它拼——和快门那种机械噪声故意分开，一听就知道是两件事 */
+function playTone(freq: number, duration: number, peakGain = 0.22) {
+  const ac = ensureAudio()
+  if (!ac || ac.state !== 'running') return
+  const t0 = ac.currentTime
+  const osc = ac.createOscillator()
+  osc.type = 'sine'
+  osc.frequency.value = freq
+  const g = ac.createGain()
+  g.gain.setValueAtTime(0, t0)
+  g.gain.linearRampToValueAtTime(peakGain, t0 + 0.015)
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + duration)
+  osc.connect(g).connect(ac.destination)
+  osc.start(t0)
+  osc.stop(t0 + duration + 0.02)
+}
+
+/** 「准备好了，开始数」——起手一次，倒计时正式开始那一刻响 */
+function playReadyChime() {
+  playTone(760, 0.16, 0.2)
+  window.setTimeout(() => playTone(1080, 0.18, 0.22), 90)
+}
+
+/** 倒计时每跳一个数响一声，越接近拍摄音调越高，听感上有种「要来了」的推进感 */
+function playCountdownTick(n: number) {
+  playTone(520 + (3 - n) * 130, 0.12, 0.18)
+}
+
+/**
+ * 「我的Wool人格」攒满 4 张、相纸从取物槽往下吐的那几秒配的打印机声。
+ * 两层：锯齿波过低通做电机的持续嗡鸣（叠一个 LFO 让频率轻微抖动，像步进电机
+ * 一格一格走），再撒几下带通噪声当走纸的咔嗒——纯音效果太干净，加点粗糙感
+ * 才像真的机器在动，不是电子提示音。
+ */
+function playPrintSound(durationS: number) {
+  const ac = ensureAudio()
+  if (!ac || ac.state !== 'running') return
+  const t0 = ac.currentTime
+
+  const osc = ac.createOscillator()
+  osc.type = 'sawtooth'
+  osc.frequency.value = 130
+  const lfo = ac.createOscillator()
+  lfo.frequency.value = 13
+  const lfoGain = ac.createGain()
+  lfoGain.gain.value = 16
+  lfo.connect(lfoGain).connect(osc.frequency)
+
+  const filter = ac.createBiquadFilter()
+  filter.type = 'lowpass'
+  filter.frequency.value = 850
+
+  const hum = ac.createGain()
+  hum.gain.setValueAtTime(0, t0)
+  hum.gain.linearRampToValueAtTime(0.13, t0 + 0.15)
+  hum.gain.setValueAtTime(0.13, t0 + durationS - 0.2)
+  hum.gain.linearRampToValueAtTime(0, t0 + durationS)
+
+  osc.connect(filter).connect(hum).connect(ac.destination)
+  osc.start(t0)
+  lfo.start(t0)
+  osc.stop(t0 + durationS + 0.05)
+  lfo.stop(t0 + durationS + 0.05)
+
+  const clicks = Math.max(4, Math.floor(durationS / 0.32))
+  for (let i = 0; i < clicks; i++) {
+    const when = t0 + 0.12 + (i * (durationS - 0.24)) / clicks
+    const len = Math.floor(ac.sampleRate * 0.03)
+    const buf = ac.createBuffer(1, len, ac.sampleRate)
+    const d = buf.getChannelData(0)
+    for (let j = 0; j < len; j++) d[j] = (Math.random() * 2 - 1) * (1 - j / len) ** 2
+    const src = ac.createBufferSource()
+    src.buffer = buf
+    const bp = ac.createBiquadFilter()
+    bp.type = 'bandpass'
+    bp.frequency.value = 2200
+    bp.Q.value = 1.5
+    const g = ac.createGain()
+    g.gain.value = 0.1
+    src.connect(bp).connect(g).connect(ac.destination)
+    src.start(when)
+  }
+}
+
 /* ── 闪白 + 照片飞进相册 ───────────────────────────────────── */
 
 const flashEl = document.createElement('div')
@@ -741,7 +835,7 @@ function flyIntoAlbum(src: string, w: number, h: number) {
 
 // 没摄像头也能试快门：控制台敲 __shutter() 起倒计时，__shot() 直接拍
 ;(window as unknown as { __shutter: () => void }).__shutter = () => {
-  countdownUntil = performance.now() + COUNTDOWN_MS
+  startCountdown(performance.now())
 }
 ;(window as unknown as { __shot: () => void }).__shot = () => {
   captureNext = true
@@ -760,7 +854,165 @@ function removeShot(index: number) {
   console.info('[shot] 删掉一张，还剩', shots.length, '张')
 }
 
-/* ── 脱下来扔进废纸篓：真的布料物理 ─────────────────────────── */
+/* ── 长按「我的Wool人格」攒满 4 张 → 整台取物机跳到画面中间打印 ─────
+ * 素材直接抄 Figma 那台取物机（print-machine.png 机身 + print-paper.png
+ * 白边相纸），不是文件夹那套扇形卡片。机身贴出来后，纸从机身的取物槽
+ * 部位往下"吐"出来——掩体（overflow: hidden）卡在取物槽的位置，纸本身
+ * 钉在掩体顶部不动，掩体越长越高，看着就是纸从缝里吐出来，和 Figma 里
+ * 收起态（一条缝）→ 展开态（完整四宫格）的两帧对得上。
+ *
+ * 取物槽 / 四张照片格子在机身图里的比例，量的是 Figma 原始节点坐标
+ * （机身 759×1350；取物槽 130,489,500,711；四张照片格子在取物槽内的
+ * 相对坐标），换算成百分比，机身不管缩多大这套比例都对得上。
+ */
+const PRINT_MACHINE_ASPECT = 759 / 1350
+const PRINT_SLOT = { left: 130 / 759, top: 489 / 1350, width: 500 / 759, height: 711 / 1350 }
+/** 四张照片格子在「取物槽」内部的相对位置，顺序对应 shots[0..3]：左上、右上、左下、右下 */
+const PRINT_CELLS = [
+  { left: 0.062, top: 0.012658, width: 0.438, height: 0.45993 },
+  { left: 0.51, top: 0.012658, width: 0.438, height: 0.45993 },
+  { left: 0.062, top: 0.48242, width: 0.438, height: 0.4782 },
+  { left: 0.51, top: 0.48242, width: 0.438, height: 0.4782 },
+]
+
+/** 整台素材放大到 1.4 倍，其余全是相对比例，跟着一起放大不用改 */
+const PRINT_SCALE = 1.4
+/** 左上角那个小叉，相对机身框（不是相对机身图片）的位置和大小，机身多大它跟着多大 */
+const PRINT_CLOSE_BTN = { left: -0.055, top: -0.055, size: 0.11 }
+/** 手指指着叉停多久算「点」了一下——不是捏合那种一下到位的手势，只能靠停留代替点击 */
+const PRINT_CLOSE_DWELL_MS = 550
+/** 相纸从取物槽里吐出来要多久（秒）。原来 1.05s 太快像甩出来的，放慢才像真的在「印」 */
+const PRINT_REVEAL_S = 2.6
+
+const printEl = document.createElement('div')
+printEl.id = 'persona-print'
+printEl.innerHTML = `
+  <img class="print-machine" src="/assets/print-machine.png" draggable="false" alt="" />
+  <div class="print-slot">
+    <div class="print-sheet">
+      <img class="print-paper" src="/assets/print-paper.png" draggable="false" alt="" />
+      <img class="cell" draggable="false" alt="" />
+      <img class="cell" draggable="false" alt="" />
+      <img class="cell" draggable="false" alt="" />
+      <img class="cell" draggable="false" alt="" />
+    </div>
+  </div>
+  <button type="button" class="print-close" aria-label="关闭">
+    <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" /></svg>
+  </button>
+`
+propsEl.append(printEl)
+gsap.set(printEl, { xPercent: -50, yPercent: -50, opacity: 0, scale: 0.6 })
+const printSlotEl = printEl.querySelector('.print-slot') as HTMLElement
+const printCloseEl = printEl.querySelector('.print-close') as HTMLElement
+const printCells = Array.from(printEl.querySelectorAll<HTMLImageElement>('.cell'))
+printSlotEl.style.left = `${PRINT_SLOT.left * 100}%`
+printSlotEl.style.top = `${PRINT_SLOT.top * 100}%`
+printSlotEl.style.width = `${PRINT_SLOT.width * 100}%`
+printCloseEl.style.left = `${PRINT_CLOSE_BTN.left * 100}%`
+printCloseEl.style.top = `${PRINT_CLOSE_BTN.top * 100}%`
+printCloseEl.style.width = `${PRINT_CLOSE_BTN.size * 100}%`
+printCells.forEach((img, i) => {
+  const c = PRINT_CELLS[i]
+  img.style.left = `${c.left * 100}%`
+  img.style.top = `${c.top * 100}%`
+  img.style.width = `${c.width * 100}%`
+  img.style.height = `${c.height * 100}%`
+})
+// 鼠标点这个叉直接关——不用等停留
+printCloseEl.addEventListener('pointerdown', (e) => {
+  e.stopPropagation()
+  closePersonaPrint()
+})
+
+let printTl: gsap.core.Timeline | null = null
+/** 展开着才需要理会关闭手势，收起来之后这些全部作废 */
+let printVisible = false
+/** 关闭叉在舞台坐标里的命中圆，只有展开时才有值——算法和 printPersonaStrip 里摆放机身用的是同一套基准 */
+let printCloseHit: { cx: number; cy: number; r: number } | null = null
+let printCloseDwellFrom = 0
+
+/**
+ * 停满 3 秒且正好 4 张时触发。不足 4 张的话 onIconDwell 那边根本不会数到这一步。
+ * 打印完不会自己收起——这是给用户看的「成果」，得让他们自己点叉/指着停 3 秒关掉，
+ * 不能刚看清楚就被系统收走。
+ */
+function printPersonaStrip() {
+  if (shots.length < MAX_SHOTS) return
+  const { w, h } = stage.content
+  if (!w || !h) return
+
+  const deviceW = Math.min(420, Math.max(220, w * 0.32)) * PRINT_SCALE
+  const deviceH = deviceW / PRINT_MACHINE_ASPECT
+  const slotFullH = deviceH * PRINT_SLOT.height
+  printCells.forEach((img, i) => {
+    img.src = shots[i]?.src ?? ''
+  })
+
+  const left = w / 2 - deviceW / 2
+  const top = h / 2 - deviceH / 2
+  printCloseHit = {
+    cx: left + (PRINT_CLOSE_BTN.left + PRINT_CLOSE_BTN.size / 2) * deviceW,
+    cy: top + (PRINT_CLOSE_BTN.top + PRINT_CLOSE_BTN.size / 2) * deviceW,
+    // 判定半径比按钮本体再宽一点，手指抖一抖也不会刚好停不中
+    r: PRINT_CLOSE_BTN.size * deviceW * 0.75,
+  }
+  printVisible = true
+  printCloseDwellFrom = 0
+
+  gsap.killTweensOf(printEl)
+  gsap.killTweensOf(printSlotEl)
+  gsap.set(printEl, { left: w / 2, top: h / 2, width: deviceW, height: deviceH, opacity: 0, scale: 0.6 })
+  gsap.set(printSlotEl, { height: 0 })
+
+  printTl?.kill()
+  printTl = gsap
+    .timeline()
+    .to(printEl, { opacity: 1, scale: 1, duration: 0.5, ease: 'back.out(1.6)' })
+    // 走纸放慢一点，配合下面的打印声——原来 1.05s 太快，像甩出来的，不像"印"出来的
+    .to(
+      printSlotEl,
+      {
+        height: slotFullH,
+        duration: PRINT_REVEAL_S,
+        ease: 'power1.out',
+        onStart: () => playPrintSound(PRINT_REVEAL_S),
+      },
+      '-=0.15',
+    )
+}
+
+/** 鼠标点叉、或手指停满 PRINT_CLOSE_DWELL_MS，都走这条路收起来——没有第三条自动收起的路 */
+function closePersonaPrint() {
+  if (!printVisible) return
+  printVisible = false
+  printCloseHit = null
+  gsap
+    .timeline()
+    .to(printSlotEl, { height: 0, duration: 0.4, ease: 'power2.in' })
+    .to(printEl, { opacity: 0, scale: 0.6, duration: 0.35, ease: 'power2.in' }, '-=0.1')
+}
+
+/**
+ * 每帧问一下：手指（point up 指尖）是不是停在关闭叉上。是鼠标点还是手势，
+ * 在这个函数里看不出来——鼠标走的是上面那个 pointerdown 监听器，这里只管手势。
+ */
+function tickPersonaPrintClose(tip: { x: number; y: number } | null) {
+  printCloseEl.classList.toggle('is-armed', false)
+  if (!printVisible || !printCloseHit) {
+    printCloseDwellFrom = 0
+    return
+  }
+  const d = tip ? Math.hypot(tip.x - printCloseHit.cx, tip.y - printCloseHit.cy) : Infinity
+  if (d >= printCloseHit.r) {
+    printCloseDwellFrom = 0
+    return
+  }
+  printCloseEl.classList.add('is-armed')
+  const now = performance.now()
+  if (!printCloseDwellFrom) printCloseDwellFrom = now
+  else if (now - printCloseDwellFrom >= PRINT_CLOSE_DWELL_MS) closePersonaPrint()
+}/* ── 脱下来扔进废纸篓：真的布料物理 ─────────────────────────── */
 
 interface Falling {
   mesh: MeshGarment
@@ -1365,6 +1617,7 @@ async function mountFolders() {
         icon: '/assets/icon-persona-wool.png',
         dot: 'var(--color-ink-50)',
         mode: 'photo',
+        iconHint: '集满 4 张停留 3 秒打印',
         cardHint: '停留删除',
         pieces: [],
         at,
@@ -1373,6 +1626,10 @@ async function mountFolders() {
         toLocal: toProps,
         onWear: () => {},
         onDelete: (_p, i) => removeShot(i),
+        onIconDwell: {
+          ready: () => shots.length >= MAX_SHOTS,
+          fire: () => printPersonaStrip(),
+        },
       }),
     )
   }
@@ -1399,6 +1656,11 @@ async function mountFolders() {
         toLocal: toProps,
         onWear: () => {},
         onDelete: d.id === 'trash' ? (piece) => takeOff(piece) : undefined,
+        // 截屏图标：停满 3 秒等同点了一下，起倒计时。没有「攒够几张」这种前提，ready 恒真
+        onIconDwell:
+          d.id === 'screenshot'
+            ? { ready: () => true, fire: () => startCountdown(performance.now()) }
+            : undefined,
       }),
     )
   }
@@ -1934,6 +2196,7 @@ function loop() {
       : null
   // 指尖也是源图坐标系的，镜像时要翻到观众看到的那一侧
   if (tip && stage.mirrored) tip = { x: w - tip.x, y: tip.y }
+  tickPersonaPrintClose(tip)
   const now = performance.now()
   // 捏合（4 号点碰 8 号点）走单独一条路：它不是「指向」，不参与文件夹的停留判定
   const hands = ui.gesture.checked ? lastHandResult?.landmarks : null
