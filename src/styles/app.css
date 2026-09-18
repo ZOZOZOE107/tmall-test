@@ -169,11 +169,12 @@ html, body {
   stroke-dasharray: var(--stroke-guide-dash) var(--stroke-guide-gap);
   vector-effect: non-scaling-stroke;
   /*
-   * 垫一层暗色晕。白墙、白衣服上只有一根 1px 红虚线会糊进背景里 ——
-   * overlay canvas 上那条真人轮廓是「3px 暗底 + 红虚线」两层描出来的，
+   * 垫一层暗色晕。白墙、白衣服上一根纯色虚线会糊进背景里 ——
+   * overlay canvas 上那条真人轮廓是「暗底 + 红虚线」两层描出来的，
    * 这条固定人形也得有同样的对比度，两条线才叠着看得清。
+   * 加了一点点模糊——线加粗之后棱角太清楚反而像矢量图标，糊一点点才像粉笔蹭出来的。
    */
-  filter: drop-shadow(0 0 1px var(--color-cut-shadow)) drop-shadow(0 0 1px var(--color-cut-shadow));
+  filter: blur(0.6px) drop-shadow(0 0 1.5px var(--color-cut-shadow)) drop-shadow(0 0 1.5px var(--color-cut-shadow));
 }
 /*
  * 画面上只有这一条线：用分割遮罩贴着真人再描一条的写法已经撤掉了，
