@@ -21,10 +21,37 @@
         <!-- 活动标题：贴在画面（视频/照片矩形）本身的左右上角，随取景框一起缩放/镜像，不是贴在整个屏幕上 -->
         <img id="brand-badge" class="corner-title" src="/assets/badge-tmall.png" alt="天猫超级品类日 · 天猫服饰" />
         <img id="campaign-title" class="corner-title is-right" src="/assets/title-wool.png" alt="时髦好 wool 穿搭指南" />
-        <!-- 站位引导：24/23 号点（左右髋）没识别到时出现，提示人往框里站 -->
-        <div id="frame-guide">
-          <span id="frame-guide-label">请进虚线框内</span>
-        </div>
+          <!--
+            站位引导：人没站到位时出现，提示人往人形轮廓里站；站进来之后同一条
+            轮廓就变成姿势参照 —— 所以画的是目标姿势本身（双手插腰、肘部外张），
+            不是随便一个站姿。
+          -->
+          <div id="frame-guide">
+            <!--
+              整个人形是「一条」闭合路径：头是顶上那段大圆弧，肩、手臂、躯干、腿、脚
+              顺着一路描下来，另一半镜像回来。这样虚线能绕轮廓连续跑一圈，不会在零件
+              接缝处断掉或重开一个虚线相位。viewBox 的 3:8 和容器的 aspect-ratio 一致。
+              取点按成人比例：身高 724（y 66→790，头是一个半径 50 的圆），
+              肩宽约 0.25H、腰约 0.15H、裆在离地 0.47H 处。
+
+              手臂这一段是「双手插腰」：上臂从肩斜下到肘，肘甩到 x≈270（比
+              躯干外沿还外 70 个单位，叉腰的那个三角空隙就是这么来的），前臂
+              几乎水平地收回来，手落在腰头上（x≈200，y≈370，压在躯干轮廓边上）。
+              站位判定和姿势判定都以这条路径为准 ——
+              改路径必须同步改 core/stand-guide.ts 的 FIG。
+            -->
+            <svg class="frame-guide-shape" viewBox="0 0 300 800" aria-hidden="true">
+              <path d="M 132 162.6 A 50 50 0 1 1 168 162.6 L 168 192 L 188 199 L 210 206 L 226 218 L 240 250 L 254 300 L 264 346 L 270 372 L 270 388 L 262 400 L 246 404 L 228 402 L 214 394 L 204 386 L 198 374 L 200 362 L 208 354 L 224 358 L 240 364 L 252 372 L 256 384 L 246 344 L 234 300 L 224 260 L 214 238 L 208 228 L 202 250 L 199 296 L 197 344 L 198 394 L 202 434 L 207 474 L 211 524 L 213 574 L 211 626 L 207 690 L 203 755 L 202 780 L 200 790 L 177 790 L 177 780 L 177 750 L 178 702 L 181 655 L 182 602 L 179 545 L 172 495 L 162 462 L 138 462 L 128 495 L 121 545 L 118 602 L 119 655 L 122 702 L 123 750 L 123 780 L 123 790 L 100 790 L 98 780 L 97 755 L 93 690 L 89 626 L 87 574 L 89 524 L 93 474 L 98 434 L 102 394 L 103 344 L 101 296 L 98 250 L 92 228 L 86 238 L 76 260 L 66 300 L 54 344 L 44 384 L 48 372 L 60 364 L 76 358 L 92 354 L 100 362 L 102 374 L 96 386 L 86 394 L 72 402 L 54 404 L 38 400 L 30 388 L 30 372 L 36 346 L 46 300 L 60 250 L 74 218 L 90 206 L 112 199 L 132 192 Z" />
+            </svg>
+            <!-- 姿势保持进度环：复用文件夹停留那套环的描边规格，位置在人形胸口 -->
+            <div class="folder-dwell stand-ring" id="stand-ring">
+              <svg viewBox="0 0 40 40">
+                <circle cx="20" cy="20" r="18" />
+                <circle cx="20" cy="20" r="18" class="bar" />
+              </svg>
+            </div>
+            <span id="frame-guide-label">请站在人形框内</span>
+          </div>
 
         <!-- 右下角小 logo。冒号的两个点（方块+圆）当眼睛，轮流眨一下，活泼一点 -->
         <svg id="corner-logo" viewBox="0 0 87 93" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -143,6 +170,8 @@
             <input type="range" id="dev-vis" min="0" max="0.9" step="0.05" value="0.5" />
             <output id="dev-vis-val">0.50</output>
           </div>
+          <!-- 站位引导常显：调试「贴着人画的虚线」时不用真等人走出识别范围 -->
+          <label class="dev-check"><input type="checkbox" id="dev-guide" /><span>Guide</span></label>
           <label class="dev-check"><input type="checkbox" id="dev-hand" /><span>Hand</span></label>
           <label class="dev-check"><input type="checkbox" id="dev-segmentation" /><span>Cutout</span></label>
           <label class="dev-check"><input type="checkbox" id="dev-cloud-rain" /><span>Cloud Rain</span></label>
@@ -206,6 +235,7 @@
           <div><span>stage</span><b id="stat-stage">—</b></div>
           <div><span>env</span><b id="stat-env">—</b></div>
           <div><span>hands</span><b id="stat-hands">—</b></div>
+          <div><span>guide</span><b id="stat-guide">—</b></div>
           <div><span>device</span><b id="dev-device-badge">desktop</b></div>
           <p class="dev-note" id="dev-device-note">Processed on-device only. Nothing is recorded or uploaded.</p>
         </section>

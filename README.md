@@ -15,6 +15,8 @@ npm run dev
 
 - 左边中间的小把手点开工具栏，或按 <kbd>`</kbd>
 - `?src=/test/pose-full-body.jpg` 直接喂素材，跳过摄像头。调锚点和现场演示兜底都用它
+- 站位引导是四态流程：人形框（双手插腰）→ 走到框内 → 摆姿势 → 定格。
+  判定在 `core/stand-guide.ts`，工具栏按 <kbd>V</kbd> 展开看 `guide` 一行（状态 + 姿势分）
 - 文件可以直接拖到页面上
 
 ## 结构
@@ -28,6 +30,7 @@ src/
     pose.ts     MediaPipe Pose Landmarker 封装（33 点）
     hands.ts    MediaPipe Hand Landmarker 封装（21 点 / 手）
     draw.ts     骨骼与手部绘制
+    stand-guide.ts  站位引导 + 姿势确认：站位（远近/左右）、姿势（双手插腰）、定格
   ui/
     toolbar.ts  开发工具栏开合
   styles/

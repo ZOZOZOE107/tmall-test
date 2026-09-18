@@ -4,6 +4,7 @@ import { SourceManager } from './core/source'
 import { PoseEngine, type ModelName, type Delegate, type PoseLandmarkerResult } from './core/pose'
 import { HandEngine, type HandLandmarkerResult } from './core/hands'
 import { clear, drawHands, drawSkeleton, resizeCanvas } from './core/draw'
+import { StandGuide, type GuideBox, type StandReport } from './core/stand-guide'
 import { forInference, inferSize } from './core/downscale'
 import { Garment, TOP_01 } from './core/garment'
 import { MeshGarment, type MeshGarmentConfig } from './core/garment-mesh'
@@ -28,11 +29,76 @@ const canvasEl = $<HTMLCanvasElement>('overlay')
 const propsEl = $('props')
 const frameGuideEl = $('frame-guide')
 
-/** 24/23 号点（左右髋）没稳定识别到时，提示人往虚线框里站 */
-function syncFrameGuide(lms: { visibility?: number }[] | undefined, minVisibility: number) {
-  const hipsOk = !!lms && [23, 24].every((i) => (lms[i]?.visibility ?? 0) >= minVisibility)
-  frameGuideEl.classList.toggle('is-on', !hipsOk)
+const frameGuideLabelEl = $('frame-guide-label')
+const standRingEl = $('stand-ring')
+const standRingBarEl = standRingEl.querySelector<SVGCircleElement>('circle.bar')!
+/** 进度环的周长，和 folder.css 里 circle.bar 的 stroke-dasharray 对齐（2πr, r=18） */
+const STAND_RING_LEN = 113.1
+
+const standGuide = new StandGuide()
+
+/** #frame-guide 在舞台坐标里的框。未变换的布局值，和 stage.content 同一套单位 */
+function guideBox(): GuideBox {
+  // CSS 是 left:50% + translateX(-50%)：offsetLeft 拿到的是「没被 transform 挪过」
+  // 的左边缘，也就是中线。视觉上的左边缘要往回退半个宽度 —— 不修这一步，
+  // 判定会以为人形框在画面右半边，所有人都会被判成「偏左」。
+  const w = frameGuideEl.offsetWidth
+  return {
+    x: frameGuideEl.offsetLeft - w / 2,
+    y: frameGuideEl.offsetTop,
+    w,
+    h: frameGuideEl.offsetHeight,
+  }
 }
+
+/** 定格完成后这层还留多久 —— 让人看一眼「姿势已锁定」，然后让位给后面的流程 */
+const READY_SHOW_MS = 1600
+let readyShownAt = 0
+let guideClock = performance.now()
+
+/**
+ * 站位引导 + 姿势确认的显示层。判定全在 core/stand-guide.ts，这里只管画：
+ *
+ *   idle    人形 + 一句「往哪儿站」
+ *   framed  站位对了，人形就是姿势参照，文字提示摆姿势
+ *   holding 姿势命中，进度环开始走
+ *   ready   定格完成，人形和文字一起收掉
+ *
+ * 画面上只有这一条线 —— 之前还会用分割遮罩在 overlay canvas 上再描一条
+ * 「贴着真人走」的轮廓，两条线一起动反而看不清该往哪儿站，撤掉了。
+ * core/body-outline.ts 留着，将来要做「贴合度」反馈可以再挂回去。
+ */
+function paintStandGuide(r: StandReport): void {
+  // Guide 勾上就常显，调样式时不用真等人走出识别范围
+  const forced = ui.guide.checked
+  let label: string
+
+  if (r.state === 'ready') {
+    if (!readyShownAt) readyShownAt = performance.now()
+    label = '姿势已锁定'
+  } else {
+    readyShownAt = 0
+    if (!r.hasBody) label = '请站在人形框内'
+    else if (r.distance === 'far') label = '再往前站一点'
+    else if (r.distance === 'near') label = '再往后退一点'
+    else if (r.offset === 'left') label = '往画面右侧挪一点'
+    else if (r.offset === 'right') label = '往画面左侧挪一点'
+    else label = r.state === 'holding' ? '保持住' : '双手插腰，肘部向外'
+  }
+
+  const on = forced || r.state !== 'ready' || performance.now() - readyShownAt < READY_SHOW_MS
+  frameGuideEl.classList.toggle('is-on', on)
+  frameGuideEl.classList.toggle('is-ready', r.state === 'ready')
+  if (frameGuideLabelEl.textContent !== label) frameGuideLabelEl.textContent = label
+
+  const ringOn = r.state === 'holding' && r.hold > 0
+  standRingEl.classList.toggle('is-on', ringOn)
+  if (ringOn) standRingBarEl.style.strokeDashoffset = String(STAND_RING_LEN * (1 - r.hold))
+}
+
+/** 最近一次判定结果。调试用：窗口里能直接读原始数字，和 __lms / __mesh 一个路子 */
+let lastStand: StandReport | null = null
+;(window as unknown as { __standGuide: () => StandReport | null }).__standGuide = () => lastStand
 const bootHint = $('boot-hint')
 const loadingScreen = $('loading-screen')
 const loadingBarFill = $('loading-bar-fill')
@@ -68,6 +134,7 @@ const ui = {
   delegate: $<HTMLSelectElement>('dev-delegate'),
   vis: $<HTMLInputElement>('dev-vis'),
   visVal: $<HTMLOutputElement>('dev-vis-val'),
+  guide: $<HTMLInputElement>('dev-guide'),
   hand: $<HTMLInputElement>('dev-hand'),
   segmentation: $<HTMLInputElement>('dev-segmentation'),
   cloudRain: $<HTMLInputElement>('dev-cloud-rain'),
@@ -94,6 +161,7 @@ const ui = {
   statInfer: $('stat-infer'),
   statInferHand: $('stat-infer-hand'),
   statHands: $('stat-hands'),
+  statGuide: $('stat-guide'),
 }
 
 const panel = new DevPanel($('dev-panel'), $<HTMLButtonElement>('dev-handle'))
@@ -1782,6 +1850,10 @@ function refreshStats() {
   ui.statInfer.textContent = pose.ready ? `${pose.inferMs.toFixed(1)} ms` : 'loading'
   ui.statInferHand.textContent = !handNeeded() ? 'off' : hand.ready ? `${hand.inferMs.toFixed(1)} ms` : 'loading'
   ui.statHands.textContent = handNeeded() ? String(lastHandResult?.landmarks?.length ?? 0) : '—'
+  // 站位引导的当前状态 + 姿势分：调阈值时盯着这两个数就够了
+  ui.statGuide.textContent = lastStand
+    ? `${lastStand.state} · ${Math.round(lastStand.metrics.pose * 100)}%`
+    : '—'
 }
 
 const trim = (s: string, n: number) => (s.length > n ? `${s.slice(0, n)}…` : s)
@@ -2117,6 +2189,11 @@ function loop() {
 
   renderSegmentation(src.el as CanvasImageSource, w, h)
 
+  // 这一帧的人物遮罩：喂给云雨做「人挡住雨」的判定。
+  // getAsFloat32Array() 是一次从 WASM 里拷出来的，别重复取。
+  const personMask = lastResult?.segmentationMasks?.[0]
+  const maskValues = personMask ? personMask.getAsFloat32Array() : null
+
   const drawOpts = {
     minVisibility: Number(ui.vis.value),
     showIndex: ui.index.checked,
@@ -2126,8 +2203,19 @@ function loop() {
   // 衣服画在骨骼之下 —— 调试时骨骼线压在衣服上，一眼看出偏了多少
   const dpr = Math.min(window.devicePixelRatio || 1, 2)
   const lms = lastResult?.landmarks?.[0]
-  syncFrameGuide(lms, Number(ui.vis.value))
+  // 先摆位再判定：syncFrameGuideTop 每帧都要写 top，而它里面那两次
+  // getBoundingClientRect 已经把布局刷过一次了，紧接着读 offset* 不再额外付账
   syncFrameGuideTop(w)
+  const guideNow = performance.now()
+  lastStand = standGuide.update(lms ?? null, guideNow - guideClock, {
+    box: guideBox(),
+    stageW: w,
+    stageH: h,
+    minVisibility: Number(ui.vis.value),
+    mirrored: stage.mirrored,
+  })
+  guideClock = guideNow
+  paintStandGuide(lastStand)
   const tSec = performance.now() / 1000
 
   // 正在从文件夹飘过来的衣服自己走布料 + 渐变贴合，这一帧已经画过了，
@@ -2209,12 +2297,7 @@ function loop() {
   const rainPinch = hands?.length ? pinch(hands, w, h) : null
   handleCloudRainClosePinch(rainPinch)
   cloudRain.updateHand(rainPinch)
-  const personMask = lastResult?.segmentationMasks?.[0]
-  cloudRain.setMask(
-    personMask?.getAsFloat32Array() ?? null,
-    personMask?.width ?? 0,
-    personMask?.height ?? 0,
-  )
+  cloudRain.setMask(maskValues, personMask?.width ?? 0, personMask?.height ?? 0)
   cloudRain.update(now, w, h, lms)
   syncCloudRainHints()
 

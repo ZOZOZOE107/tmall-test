@@ -128,12 +128,13 @@ html, body {
 }
 
 /*
- * 站位引导框：髋部（23/24 号点）没识别到时出现，提示人往框里站。超细虚线，
- * 文字贴在框内上沿，不挂在框外面。不接鼠标——纯提示，不挡任何交互。
+ * 站位引导：髋部（23/24 号点）没识别到时出现，提示人往人形轮廓里站。超细虚线，
+ * 文字贴在人形头顶上方，不挂在轮廓外面。不接鼠标——纯提示，不挡任何交互。
  *
- * 框的比例锁定成「人体」的高宽比，不是页面的高宽比 —— 上下边界卡在赛道词语
- * 下面一点／页面底部上来一点，左右宽度用 aspect-ratio 按这个高度反算，人站
- * 多宽的画面里框都不会跟着变形。
+ * 容器比例还是锁定成「人体」的高宽比，不是页面的高宽比 —— 上下边界卡在赛道词语
+ * 下面一点／页面底部上来一点，左右宽度用 aspect-ratio 按这个高度反算。里面装的是
+ * index.html 里那条 300×800 的人形路径，viewBox 和这个比例一致，所以人形跟着容器
+ * 等比缩放，画面比例换了也不会被拉扁。
  */
 #frame-guide {
   position: absolute;
@@ -143,13 +144,58 @@ html, body {
   transform: translateX(-50%);
   aspect-ratio: 3 / 8;
   z-index: 4;
-  border: 1px dashed var(--color-tmall-red);
+  color: var(--color-tmall-red);
   opacity: 0;
   pointer-events: none;
   user-select: none;
   transition: opacity var(--motion-fast) linear;
 }
 #frame-guide.is-on { opacity: 0.85; }
+
+/*
+ * 人形轮廓的描边规格。non-scaling-stroke：线宽和虚线节奏跟原来那条 1px 的
+ * dashed border 一样，取景框放大缩小都不会跟着变粗变细。
+ */
+#frame-guide .frame-guide-shape {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: var(--stroke-guide-width);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: var(--stroke-guide-dash) var(--stroke-guide-gap);
+  vector-effect: non-scaling-stroke;
+  /*
+   * 垫一层暗色晕。白墙、白衣服上只有一根 1px 红虚线会糊进背景里 ——
+   * overlay canvas 上那条真人轮廓是「3px 暗底 + 红虚线」两层描出来的，
+   * 这条固定人形也得有同样的对比度，两条线才叠着看得清。
+   */
+  filter: drop-shadow(0 0 1px var(--color-cut-shadow)) drop-shadow(0 0 1px var(--color-cut-shadow));
+}
+/*
+ * 画面上只有这一条线：用分割遮罩贴着真人再描一条的写法已经撤掉了，
+ * 两条线一起动反而看不清该往哪儿站。所以这里没有「有人时压暗」这回事。
+ */
+/* 定格完成：人已经站好了，这层就该让位了 */
+#frame-guide.is-ready .frame-guide-shape { opacity: 0; }
+
+/*
+ * 姿势保持进度环。规格直接复用文件夹停留那套（folder.css 的 .folder-dwell），
+ * 只换位置和尺寸；进度是 main.ts 每帧写进 stroke-dashoffset 的，
+ * 所以要把过渡关掉，否则手一动环就追不上。
+ */
+.stand-ring {
+  left: 50%;
+  top: 32%;
+  transform: translate(-50%, -50%);
+  --dwell-size: calc(64px * var(--tier));
+  --dwell-color: var(--color-tmall-red);
+}
+.stand-ring.is-on circle.bar { transition: none; }
+
 #frame-guide-label {
   position: absolute;
   left: 50%;
@@ -157,7 +203,7 @@ html, body {
   transform: translateX(-50%);
   white-space: nowrap;
   font-size: var(--dev-font-sm, 13px);
-  color: var(--color-tmall-red);
+  color: currentColor;
   text-shadow: 0 1px 6px var(--color-cut-shadow);
 }
 

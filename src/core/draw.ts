@@ -53,6 +53,49 @@ export function clear(ctx: CanvasRenderingContext2D, w: number, h: number) {
   ctx.clearRect(0, 0, w, h)
 }
 
+/** 站位引导虚线：和 Figma 里那条天猫红一致 */
+export const GUIDE_COLOR = '#ff0036'
+
+/**
+ * 沿着识别到的人形画一圈虚线。点列是 0~1 归一化坐标（和关键点同一套），
+ * 直接乘舞台宽高即可。
+ *
+ * 先描一层半透明深色底再描红虚线：画面上亮的地方（白墙、白衣服）只有红线的话
+ * 会糊进背景里，垫一层暗边才有对比。
+ */
+export function drawBodyOutline(
+  ctx: CanvasRenderingContext2D,
+  points: Float32Array,
+  w: number,
+  h: number,
+  dash: [number, number] = [6, 5],
+) {
+  const n = points.length / 2
+  if (n < 3) return
+  ctx.save()
+  ctx.beginPath()
+  for (let i = 0; i < n; i++) {
+    const x = points[i * 2] * w
+    const y = points[i * 2 + 1] * h
+    if (i === 0) ctx.moveTo(x, y)
+    else ctx.lineTo(x, y)
+  }
+  ctx.closePath()
+  ctx.lineJoin = 'round'
+  ctx.lineCap = 'round'
+
+  ctx.setLineDash([])
+  ctx.lineWidth = 3
+  ctx.strokeStyle = 'rgba(0,0,0,0.22)'
+  ctx.stroke()
+
+  ctx.setLineDash(dash)
+  ctx.lineWidth = 1.4
+  ctx.strokeStyle = GUIDE_COLOR
+  ctx.stroke()
+  ctx.restore()
+}
+
 export function drawSkeleton(
   ctx: CanvasRenderingContext2D,
   landmarks: NormalizedLandmark[],

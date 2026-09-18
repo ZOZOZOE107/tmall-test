@@ -93,6 +93,11 @@
   --stroke-cut-dash: 10px;
   --stroke-cut-gap: 6px;
 
+  /* 站位引导人形轮廓的描边规格（non-scaling-stroke，单位就是屏幕像素） */
+  --stroke-guide-width: 1px;
+  --stroke-guide-dash: 6px;
+  --stroke-guide-gap: 5px;
+
   /* 尺寸档乘数，stage.ts 运行时覆盖：compact .85 / regular 1 / large 1.15 */
   --tier: 1;
 }

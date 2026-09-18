@@ -47,6 +47,13 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
+    /*
+     * Vite 6 会拒掉 Host 头不在白名单里的请求 —— 手机用流量的时候，
+     * 页面是靠隧道转进来的，域名是随机的 xxx.trycloudflare.com，
+     * 不放行的话浏览器只会拿到一句 "Blocked request"。
+     * 带点前缀是「匹配所有子域」的写法，隧道域名每次重建都会变，必须这么写。
+     */
+    allowedHosts: ['.trycloudflare.com', '.loca.lt'],
   },
   build: {
     target: 'es2022',
