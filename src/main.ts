@@ -35,6 +35,10 @@ const standRingBarEl = standRingEl.querySelector<SVGCircleElement>('circle.bar')
 /** 进度环的周长，和 folder.css 里 circle.bar 的 stroke-dasharray 对齐（2πr, r=18） */
 const STAND_RING_LEN = 113.1
 
+// 横向居中改交给 GSAP（xPercent），后面弹走动画要写同一个 transform，
+// 留给 CSS 的话每次 gsap.to() 都会把 translateX(-50%) 一起冲掉
+gsap.set(frameGuideEl, { xPercent: -50, y: 0 })
+
 const standGuide = new StandGuide()
 
 /** #frame-guide 在舞台坐标里的框。未变换的布局值，和 stage.content 同一套单位 */
@@ -55,6 +59,10 @@ function guideBox(): GuideBox {
 const READY_SHOW_MS = 1600
 let readyShownAt = 0
 let guideClock = performance.now()
+/** 膝盖（25/26 号点）一出现就弹走，人已经完整入镜，虚线人形没必要再挡着 */
+let guideDismissed = false
+/** 没在弹走/弹回那两下的时候，普通淡入淡出跟着这个值走，只在它变了才补一次 tween */
+let guideOnPrev = false
 
 /**
  * 站位引导 + 姿势确认的显示层。判定全在 core/stand-guide.ts，这里只管画：
@@ -84,9 +92,26 @@ function paintStandGuide(r: StandReport): void {
   }
 
   const on = forced || r.state !== 'ready' || performance.now() - readyShownAt < READY_SHOW_MS
-  frameGuideEl.classList.toggle('is-on', on)
   frameGuideEl.classList.toggle('is-ready', r.state === 'ready')
   if (frameGuideLabelEl.textContent !== label) frameGuideLabelEl.textContent = label
+
+  // 膝盖（25/26 号点，hasBody 的判定里已经包含）一出现，说明人整个站进画面了，
+  // 虚线人形弹走让位；人退出去、膝盖又看不见了，弹簧把它接回来。
+  // Guide 勾上强制常显时不弹走——调样式总得让它老实待着。
+  const dismissed = r.hasBody && !forced
+  if (dismissed !== guideDismissed) {
+    guideDismissed = dismissed
+    gsap.killTweensOf(frameGuideEl)
+    if (dismissed) {
+      gsap.to(frameGuideEl, { y: -140, opacity: 0, duration: 0.5, ease: 'back.in(1.8)' })
+    } else {
+      guideOnPrev = on
+      gsap.to(frameGuideEl, { y: 0, opacity: on ? 0.85 : 0, duration: 0.45, ease: 'back.out(1.6)' })
+    }
+  } else if (!guideDismissed && on !== guideOnPrev) {
+    guideOnPrev = on
+    gsap.to(frameGuideEl, { opacity: on ? 0.85 : 0, duration: 0.15, overwrite: 'auto' })
+  }
 
   const ringOn = r.state === 'holding' && r.hold > 0
   standRingEl.classList.toggle('is-on', ringOn)

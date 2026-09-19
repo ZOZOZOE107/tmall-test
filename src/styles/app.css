@@ -136,21 +136,24 @@ html, body {
  * index.html 里那条 261.69×639.36 的人形路径（资源 2.svg），viewBox 和这个比例
  * 一致，所以人形跟着容器等比缩放，画面比例换了也不会被拉扁。
  */
+/*
+ * 横向居中（xPercent: -50）和显隐/弹走的 y、opacity 全部交给 main.ts 的
+ * GSAP 去管——25/26 号点（膝盖）一出现，整个框要往上弹走，普通 CSS
+ * transition 和这条弹簧动画会抢同一个 transform/opacity，索性都不在这
+ * 写死，只留位置、比例这些静态值。
+ */
 #frame-guide {
   position: absolute;
   left: 50%;
   top: 22%;
   bottom: 4%;
-  transform: translateX(-50%);
   aspect-ratio: 261.69 / 639.36;
   z-index: 4;
   color: var(--color-cut-white);
   opacity: 0;
   pointer-events: none;
   user-select: none;
-  transition: opacity var(--motion-fast) linear;
 }
-#frame-guide.is-on { opacity: 0.85; }
 
 /*
  * 人形轮廓的描边规格。non-scaling-stroke：线宽和虚线节奏跟原来那条 1px 的
