@@ -77,13 +77,10 @@ function paintStandGuide(r: StandReport): void {
     if (!readyShownAt) readyShownAt = performance.now()
     label = '姿势已锁定'
   } else {
+    // 站位/姿势/远近偏移之前各有各的提示语，现在统一成一句——不管差在哪，
+    // 都只说「请进入虚线框内」，具体怎么站交给虚线人形本身去演示
     readyShownAt = 0
-    if (!r.hasBody) label = '请进入虚线框内:)'
-    else if (r.distance === 'far') label = '再往前站一点'
-    else if (r.distance === 'near') label = '再往后退一点'
-    else if (r.offset === 'left') label = '往画面右侧挪一点'
-    else if (r.offset === 'right') label = '往画面左侧挪一点'
-    else label = r.state === 'holding' ? '保持住' : '双手插腰，肘部向外'
+    label = '请进入虚线框内:)'
   }
 
   const on = forced || r.state !== 'ready' || performance.now() - readyShownAt < READY_SHOW_MS

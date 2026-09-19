@@ -200,8 +200,10 @@ html, body {
 #frame-guide-label {
   position: absolute;
   left: 50%;
-  top: 12px;
-  transform: translateX(-50%);
+  /* 挪到框中间——原来贴在顶上。停留进度环也在框中间（top: 32%），
+     故意比环高一点，免得字和环转圈叠在一起 */
+  top: 24%;
+  transform: translate(-50%, -50%);
   white-space: nowrap;
   font-size: var(--dev-font-sm, 13px);
   color: currentColor;
