@@ -54,14 +54,14 @@
                 }
               },
               "widthEase": 1,
-              "lengthEase": 0.9,
+              "lengthEase": 0.82,
               "grid": 24,
               "torsoBias": 2.2,
               "falloff": 3,
               "src": "/garments/intellect/look1/top.png",
               "id": "intellect-look1-top",
               "tuned": true,
-              "offsetY": 0,
+              "offsetY": -0.05,
               "seam": {
                 "r": [
                   {
@@ -163,12 +163,12 @@
               "rig": "top",
               "rest": {
                 "rShoulder": {
-                  "x": 0.3299,
-                  "y": 0.1517
+                  "x": 0.3327,
+                  "y": 0.1606
                 },
                 "lShoulder": {
-                  "x": 0.6701,
-                  "y": 0.1517
+                  "x": 0.6673,
+                  "y": 0.1606
                 },
                 "rElbow": {
                   "x": 0.2687,
@@ -420,12 +420,12 @@
               "rig": "top",
               "rest": {
                 "rShoulder": {
-                  "x": 0.3223,
-                  "y": 0.1963
+                  "x": 0.3327,
+                  "y": 0.1994
                 },
                 "lShoulder": {
-                  "x": 0.6777,
-                  "y": 0.1963
+                  "x": 0.6673,
+                  "y": 0.1994
                 },
                 "rElbow": {
                   "x": 0.2589,
@@ -580,12 +580,12 @@
               "rig": "top",
               "rest": {
                 "rShoulder": {
-                  "x": 0.2818,
-                  "y": 0.1873
+                  "x": 0.2884,
+                  "y": 0.1895
                 },
                 "lShoulder": {
-                  "x": 0.7182,
-                  "y": 0.1873
+                  "x": 0.7116,
+                  "y": 0.1895
                 },
                 "rElbow": {
                   "x": 0.2017,
@@ -692,12 +692,12 @@
               "rig": "top",
               "rest": {
                 "rShoulder": {
-                  "x": 0.3123,
-                  "y": 0.2308
+                  "x": 0.3104,
+                  "y": 0.2562
                 },
                 "lShoulder": {
-                  "x": 0.6877,
-                  "y": 0.2308
+                  "x": 0.6896,
+                  "y": 0.2562
                 },
                 "rElbow": {
                   "x": 0.2267,
@@ -724,11 +724,11 @@
                   "y": 0.8731
                 }
               },
-              "widthEase": 0.88,
-              "lengthEase": 0.86,
+              "widthEase": 0.99,
+              "lengthEase": 0.83,
               "grid": 24,
-              "torsoBias": 2.2,
-              "falloff": 3,
+              "torsoBias": 1.4,
+              "falloff": 2.3,
               "src": "/garments/homebody/look2/top.png",
               "id": "homebody-look2-top",
               "tuned": true,
@@ -877,12 +877,12 @@
               "rig": "top",
               "rest": {
                 "rShoulder": {
-                  "x": 0.3216,
-                  "y": 0.168
+                  "x": 0.3258,
+                  "y": 0.1752
                 },
                 "lShoulder": {
-                  "x": 0.6784,
-                  "y": 0.168
+                  "x": 0.6742,
+                  "y": 0.1752
                 },
                 "rElbow": {
                   "x": 0.1563,
