@@ -95,10 +95,11 @@ function paintStandGuide(r: StandReport): void {
   frameGuideEl.classList.toggle('is-ready', r.state === 'ready')
   if (frameGuideLabelEl.textContent !== label) frameGuideLabelEl.textContent = label
 
-  // 膝盖（25/26 号点，hasBody 的判定里已经包含）一出现，说明人整个站进画面了，
-  // 虚线人形弹走让位；人退出去、膝盖又看不见了，弹簧把它接回来。
+  // 髋部（23/24 号点）一出现，说明人半身以上站进画面了，虚线人形就弹走让位——
+  // 不用等 hasBody 那套连膝盖脚踝都要够置信度的严格判定，髋部一露头就够了。
+  // 人退出去、髋部又看不见了，弹簧把它接回来。
   // Guide 勾上强制常显时不弹走——调样式总得让它老实待着。
-  const dismissed = r.hasBody && !forced
+  const dismissed = r.hipsVisible && !forced
   if (dismissed !== guideDismissed) {
     guideDismissed = dismissed
     gsap.killTweensOf(frameGuideEl)

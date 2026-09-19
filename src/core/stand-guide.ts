@@ -62,26 +62,29 @@ export interface StandReport {
   offset: StandOffset
   /** 姿势保持进度 0~1，配合进度环用 */
   hold: number
-  /** 画面里有完整的人（用来决定描不描真人轮廓） */
+  /** 画面里有完整的人（肩髋膝踝都够置信度）—— 用来决定描不描真人轮廓 */
   hasBody: boolean
+  /** 髋部（23/24 号点）够置信度——虚线人形弹走用这个，比 hasBody 早触发 */
+  hipsVisible: boolean
   metrics: StandMetrics
 }
 
 /* ── 目标人形的位置，相对 #frame-guide 容器 ─────────────────────
  *
- * 这几个数字是拿 index.html 里那条人形路径（资源 2.svg，261.69×639.36）
+ * 这几个数字是拿 index.html 里那条人形路径（资源 4.svg，523.18×1008.68）
  * 在离屏 canvas 里描实心轮廓、逐行扫左右边界量出来的：肩线大约在领口往下
- * 张开的 y=158，脚底（路径最低点）在 y=636，踝线按老比例（脚底往上 4.4%
- * 那条线）估在 y=608，左右对称所以 centerX 就是路径包围盒的中点。
- * 换成手绘线稿之后没有精确关节点可抄，这几个数字是视觉估的——容差本来就
- * 留得松（SPAN_OK ±16%、FOOT_UP/DOWN -0.18~0.12），差个几像素不影响判定。
+ * 张开的 y=296，脚底（路径最低点）在 y=1006，踝线按老比例（脚底往上 4.4%
+ * 那条线）估在 y=962，左右对称所以 centerX 就是路径包围盒的中点。
+ * 这条手绘轮廓下摆很宽、没有明显的脚，「脚底/踝线」这两个名字只是沿用旧的
+ * 叫法，实际就是「路径最低点」和「往上一截」两个参考线——容差本来就留得松
+ * （SPAN_OK ±16%、FOOT_UP/DOWN -0.18~0.12），差个几像素不影响判定。
  * 改那条路径就得回来改这里，否则「站位刚好」会被判成偏近或偏远。
  */
 const FIG = {
-  centerX: 130.8 / 261.69,
-  shoulderY: 158 / 639.36,
-  footY: 636 / 639.36,
-  ankleY: 608 / 639.36,
+  centerX: 261.59 / 523.18,
+  shoulderY: 296 / 1008.68,
+  footY: 1006 / 1008.68,
+  ankleY: 961.6 / 1008.68,
 } as const
 /** 站着不动时肩到踝该占人形框高的多少 —— 也就是「人和画出的人形一样高」 */
 const SPAN_TARGET = FIG.ankleY - FIG.shoulderY
@@ -203,6 +206,9 @@ export class StandGuide {
     // 姿势另要肘和腕（手插在腰头里时腕的置信度会偏低，所以下限和滑杆共用一份）。
     const bodyOk = !!lms && [11, 12, 23, 24, 25, 26, 27, 28].every((i) => vis(i) >= f.minVisibility)
     const poseVisible = [13, 14, 15, 16].every((i) => vis(i) >= f.minVisibility)
+    // 虚线人形弹走单独看髋部（23/24）——不等膝盖、脚踝也进画面，人一半身子
+    // 站进来就该让位，比 bodyOk 早触发
+    const hipsVisible = !!lms && [23, 24].every((i) => vis(i) >= f.minVisibility)
 
     let distance: StandDistance = 'none'
     let offset: StandOffset = 'none'
@@ -263,10 +269,10 @@ export class StandGuide {
     if (this.state === 'ready') {
       if (framed) {
         this.lostMs = 0
-        return this.report(distance, offset, true, metrics)
+        return this.report(distance, offset, true, hipsVisible, metrics)
       }
       this.lostMs += dt
-      if (this.lostMs < READY_GRACE_MS) return this.report(distance, offset, true, metrics)
+      if (this.lostMs < READY_GRACE_MS) return this.report(distance, offset, true, hipsVisible, metrics)
       this.reset()
     }
 
@@ -287,13 +293,14 @@ export class StandGuide {
       this.state = this.holdMs > 0 ? 'holding' : 'framed'
     }
 
-    return this.report(distance, offset, bodyOk, metrics)
+    return this.report(distance, offset, bodyOk, hipsVisible, metrics)
   }
 
   private report(
     distance: StandDistance,
     offset: StandOffset,
     hasBody: boolean,
+    hipsVisible: boolean,
     metrics: StandMetrics,
   ): StandReport {
     return {
@@ -302,6 +309,7 @@ export class StandGuide {
       offset,
       hold: this.holdMs / HOLD_MS,
       hasBody,
+      hipsVisible,
       metrics,
     }
   }
