@@ -657,9 +657,41 @@ function handlePinch(p: { x: number; y: number } | null, now: number) {
   }
 }
 
+/** 右上/左上品牌角标、右下角小 logo——数值原样抄 app.css 里 .corner-title / #corner-logo 那几行，改了记得两边一起改 */
+const brandBadgeEl = document.getElementById('brand-badge') as HTMLImageElement
+const campaignTitleEl = document.getElementById('campaign-title') as HTMLImageElement
+/** corner-logo 是内联 SVG，眨眼/描边动画只存在于 DOM 里，canvas 画不出动画中间态——
+ * 直接拿它的源文件当静态图用，截图里显示的是「画完」那一帧，反而更清楚 */
+const cornerLogoImg = new Image()
+cornerLogoImg.src = '/assets/aoe-logo-source.svg'
+
+function drawCornerBranding(g: CanvasRenderingContext2D, w: number, h: number) {
+  if (brandBadgeEl.complete && brandBadgeEl.naturalWidth) {
+    const bw = Math.min(260, w * 0.17)
+    const bh = bw * (brandBadgeEl.naturalHeight / brandBadgeEl.naturalWidth)
+    g.drawImage(brandBadgeEl, w * 0.025, h * 0.03, bw, bh)
+  }
+  if (campaignTitleEl.complete && campaignTitleEl.naturalWidth) {
+    // CSS 里这张图有个 scale(1.3) transform-origin:top right，右上角是不动点
+    const baseW = Math.min(190, w * 0.12)
+    const baseH = baseW * (campaignTitleEl.naturalHeight / campaignTitleEl.naturalWidth)
+    const anchorX = w - w * 0.02
+    const topY = h * 0.03
+    const sw = baseW * 1.3
+    const sh = baseH * 1.3
+    g.drawImage(campaignTitleEl, anchorX - sw, topY, sw, sh)
+  }
+  if (cornerLogoImg.complete && cornerLogoImg.naturalWidth) {
+    const lw = Math.min(44, Math.max(28, w * 0.06))
+    const lh = lw * (cornerLogoImg.naturalHeight / cornerLogoImg.naturalWidth || 93 / 87)
+    g.drawImage(cornerLogoImg, w - w * 0.02 - lw, h - h * 0.02 - lh, lw, lh)
+  }
+}
+
 /**
- * 把画面合成成一张照片：背景 + 两层衣服。骨骼线和文件夹 UI 不进照片 ——
- * 拍的是「穿着这身的你」，不是调试画面。
+ * 把画面合成成一张照片：背景 + 两层衣服 + 云雨 + 桌面品牌角标/文件夹图标。
+ * 骨骼线、扇形卡片、停留进度环这些交互调试态不进照片——拍的是「穿着这身、
+ * 站在这张桌面上的你」，不是调试画面。
  */
 async function snapshot(w: number, h: number) {
   const src = sources.current
@@ -680,6 +712,12 @@ async function snapshot(w: number, h: number) {
     for (const layer of [layerBottom, layerTop, layerTape, layerCloudRain]) {
       g.drawImage(layer, 0, 0, c.width, c.height)
     }
+    // 桌面图标/品牌角标本来就是「观众视角」坐标（#props 的 CSS 反向 transform 已经
+    // 抵消过舞台镜像了）——继续用上面那个镜像过的 context 画，会被镜镜相抵画反，
+    // 这里先归零变换，让它们按自己本来的坐标落进去
+    g.setTransform(1, 0, 0, 1, 0, 0)
+    drawCornerBranding(g, c.width, c.height)
+    for (const f of folders) f.renderDesktopIcon(g)
   } catch (e) {
     console.warn('[shot] 合成失败', e)
     return

@@ -53,6 +53,11 @@ const ALPHA_GRID = 64
 const ALPHA_MIN = 24
 /** .folder-icon 的边长占 --folder 的比例，必须和 folder.css 里那行一致 */
 const ICON_DRAW = 0.8
+
+/** renderDesktopIcon() 画标签文字用的字体/颜色，抄自 tokens.css 的 --font-family / --color-cut-white / --color-cut-shadow——canvas 认不得 CSS 变量，只能抄一份字面量 */
+const DESKTOP_LABEL_FONT = "'TikTok Sans', -apple-system, system-ui, sans-serif"
+const DESKTOP_LABEL_COLOR = '#ffffff'
+const DESKTOP_LABEL_SHADOW = 'rgba(0, 0, 0, 0.18)'
 /**
  * 碰图标时往外放宽多少（图标边长的倍数）。手会抖，不留一点余量很难碰准；
  * 但必须小于图标自己那圈透明边，否则等于又把空气算回来了。
@@ -373,6 +378,8 @@ export class WardrobeFolder {
   private icon!: HTMLElement
   /** 图标图片的地址，alpha 蒙版按它取 */
   private iconSrc = ''
+  /** 标签前那个小圆点，截屏合成桌面图标时要读它算出来的实际颜色（opts.dot 可能是 var(...)，canvas 认不得） */
+  private dotEl!: HTMLElement
   private cursor: HTMLElement
   private opts: FolderOptions
 
@@ -423,10 +430,10 @@ export class WardrobeFolder {
     // 摆设图标（废纸篓、截屏那些）没有品牌，这一行就不显示
     if (opts.brand) brandEl.textContent = opts.brand
     else brandEl.remove()
-    const dot = root.querySelector('.folder-label > i') as HTMLElement
+    this.dotEl = root.querySelector('.folder-label > i') as HTMLElement
     // 没给颜色就不显示那个小圆点 —— 废纸篓、截屏这类系统图标本来也没有
-    if (opts.dot) dot.style.background = opts.dot
-    else dot.style.display = 'none'
+    if (opts.dot) this.dotEl.style.background = opts.dot
+    else this.dotEl.style.display = 'none'
 
     this.cardBox = root.querySelector('.folder-cards') as HTMLElement
     this.pieces = opts.pieces
@@ -859,6 +866,76 @@ export class WardrobeFolder {
 
   get id(): string {
     return this.opts.id
+  }
+
+  /**
+   * 把这个文件夹此刻的「桌面图标」（图标 + 圆点 + 名字/品牌）画到截屏合成用的
+   * canvas 上——只画静止态，展开的扇形卡片、停留进度环、悬浮提示都不画，
+   * 那些是交互反馈，不是桌面本身的样子。
+   *
+   * 位置/尺寸算法特意跟 layout()/folderSize() 保持同一套换算，不然截图里
+   * 的图标会和屏幕上看到的对不上。
+   */
+  renderDesktopIcon(ctx: CanvasRenderingContext2D) {
+    const { w, h } = this.opts.stageSize()
+    if (!w || !h) return
+    const size = this.folderSize(w)
+    const cx = this.at.x * w
+    const cy = this.at.y * h
+
+    const img = this.icon as HTMLImageElement
+    if (img.complete && img.naturalWidth) {
+      const draw = size * ICON_DRAW
+      // object-fit: contain 的手算版——直接拿 draw×draw 硬拉伸的话非方形图标（云、废纸篓）会变形
+      const s = Math.min(draw / img.naturalWidth, draw / img.naturalHeight)
+      const iw = img.naturalWidth * s
+      const ih = img.naturalHeight * s
+      ctx.drawImage(img, cx - iw / 2, cy - ih / 2, iw, ih)
+    }
+
+    const label = this.opts.label
+    const brand = this.opts.brand
+    const hasDot = !!this.opts.dot
+    const fontSize = size * 0.145
+    const dotSize = size * 0.13
+    const gap = size * 0.06
+    const rowTop = cy + size * 0.52
+    const nameLineH = fontSize * 1.2
+    const brandLineH = brand ? fontSize * 0.76 * 1.2 : 0
+    const textBlockH = nameLineH + brandLineH
+    const rowH = Math.max(hasDot ? dotSize : 0, textBlockH)
+
+    ctx.save()
+    ctx.font = `${fontSize}px ${DESKTOP_LABEL_FONT}`
+    ctx.textBaseline = 'alphabetic'
+    const nameWidth = ctx.measureText(label).width
+    ctx.font = `${fontSize * 0.76}px ${DESKTOP_LABEL_FONT}`
+    const brandWidth = brand ? ctx.measureText(brand).width : 0
+    const textWidth = Math.max(nameWidth, brandWidth)
+    const rowW = (hasDot ? dotSize + gap : 0) + textWidth
+    const rowLeft = cx - rowW / 2
+
+    if (hasDot) {
+      ctx.fillStyle = getComputedStyle(this.dotEl).backgroundColor
+      ctx.beginPath()
+      ctx.arc(rowLeft + dotSize / 2, rowTop + rowH / 2, dotSize / 2, 0, Math.PI * 2)
+      ctx.fill()
+    }
+
+    const textLeft = rowLeft + (hasDot ? dotSize + gap : 0)
+    ctx.shadowColor = DESKTOP_LABEL_SHADOW
+    ctx.shadowBlur = fontSize * 0.35
+    ctx.fillStyle = DESKTOP_LABEL_COLOR
+    ctx.font = `${fontSize}px ${DESKTOP_LABEL_FONT}`
+    const nameY = rowTop + (rowH - textBlockH) / 2 + nameLineH * 0.82
+    ctx.fillText(label, textLeft, nameY)
+    if (brand) {
+      ctx.globalAlpha = 0.8
+      ctx.font = `${fontSize * 0.76}px ${DESKTOP_LABEL_FONT}`
+      ctx.fillText(brand, textLeft, nameY + nameLineH * 0.5 + brandLineH * 0.72)
+      ctx.globalAlpha = 1
+    }
+    ctx.restore()
   }
 
   /** 有东西存进来了，图标弹一下 —— 不然人不知道照片去哪儿了 */
