@@ -144,7 +144,7 @@ html, body {
   transform: translateX(-50%);
   aspect-ratio: 261.69 / 639.36;
   z-index: 4;
-  color: var(--color-tmall-red);
+  color: var(--color-cut-white);
   opacity: 0;
   pointer-events: none;
   user-select: none;
