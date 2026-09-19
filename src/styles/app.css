@@ -133,8 +133,8 @@ html, body {
  *
  * 容器比例还是锁定成「人体」的高宽比，不是页面的高宽比 —— 上下边界卡在赛道词语
  * 下面一点／页面底部上来一点，左右宽度用 aspect-ratio 按这个高度反算。里面装的是
- * index.html 里那条 300×800 的人形路径，viewBox 和这个比例一致，所以人形跟着容器
- * 等比缩放，画面比例换了也不会被拉扁。
+ * index.html 里那条 261.69×639.36 的人形路径（资源 2.svg），viewBox 和这个比例
+ * 一致，所以人形跟着容器等比缩放，画面比例换了也不会被拉扁。
  */
 #frame-guide {
   position: absolute;
@@ -142,7 +142,7 @@ html, body {
   top: 22%;
   bottom: 4%;
   transform: translateX(-50%);
-  aspect-ratio: 3 / 8;
+  aspect-ratio: 261.69 / 639.36;
   z-index: 4;
   color: var(--color-tmall-red);
   opacity: 0;
