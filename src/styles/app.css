@@ -203,12 +203,15 @@ html, body {
 #frame-guide-label {
   position: absolute;
   left: 50%;
-  /* 挪到框中间——原来贴在顶上。停留进度环也在框中间（top: 32%），
-     故意比环高一点，免得字和环转圈叠在一起 */
-  top: 24%;
+  /* 挪到框中间偏下一点——原来贴在顶上。停留进度环也在框中间（top: 32%），
+     字故意还是比环高一点，免得叠在一起 */
+  top: 28%;
   transform: translate(-50%, -50%);
   white-space: nowrap;
-  font-size: var(--dev-font-sm, 13px);
+  /* 字号跟着 --tier 一起缩放（和 stand-ring 那个 --dwell-size 同一个套路），
+     不会在小屏/紧凑档下把「虚线框」三个字撑到框外面去 */
+  font-size: calc(20px * var(--tier));
+  font-weight: 700;
   color: currentColor;
   text-shadow: 0 1px 6px var(--color-cut-shadow);
 }
