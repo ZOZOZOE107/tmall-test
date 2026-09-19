@@ -161,6 +161,8 @@ html, body {
   inset: 0;
   width: 100%;
   height: 100%;
+  /* 提示语的浅弧尖顶在 viewBox 顶边（y=0）以上，不开这个会被当成溢出裁掉 */
+  overflow: visible;
   fill: none;
   stroke: currentColor;
   stroke-width: var(--stroke-guide-width);
@@ -197,15 +199,18 @@ html, body {
 }
 .stand-ring.is-on circle.bar { transition: none; }
 
-#frame-guide-label {
-  position: absolute;
-  left: 50%;
-  top: 12px;
-  transform: translateX(-50%);
-  white-space: nowrap;
-  font-size: var(--dev-font-sm, 13px);
-  color: currentColor;
-  text-shadow: 0 1px 6px var(--color-cut-shadow);
+/*
+ * 提示语现在是 <textPath>，沿着头顶正上方那条浅弧走（index.html 里的
+ * frame-guide-label-path），不再是浮在正上方的一条直白横排字——想要
+ * 「字跟着弧线走」的手写感，又不至于像贴在人形头顶那条圆弧上整圈缠住脑袋。
+ * 字号是 viewBox 用户单位（跟着人形一起等比缩放，不用 non-scaling）。
+ */
+.frame-guide-label-text {
+  fill: currentColor;
+  font-family: var(--font-family);
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
 #boot-hint {

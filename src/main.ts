@@ -78,7 +78,7 @@ function paintStandGuide(r: StandReport): void {
     label = '姿势已锁定'
   } else {
     readyShownAt = 0
-    if (!r.hasBody) label = '请站在人形框内'
+    if (!r.hasBody) label = '请进入虚线框内:)'
     else if (r.distance === 'far') label = '再往前站一点'
     else if (r.distance === 'near') label = '再往后退一点'
     else if (r.offset === 'left') label = '往画面右侧挪一点'
