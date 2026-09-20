@@ -272,6 +272,7 @@ function makeMeshLayer(id: string): HTMLCanvasElement {
 
 let meshBottom: MeshGarment | null = null
 let meshTop: MeshGarment | null = null
+let currentLook: { theme: string; look: string } | null = null
 /** 双手叉腰姿势首次锁定后永久解锁；后续动作变化不再隐藏衣服。 */
 let garmentUnlocked = false
 
@@ -283,17 +284,29 @@ async function loadLook(themeId: string, lookId: string) {
     console.warn('[wardrobe] 找不到', themeId, lookId)
     return
   }
-  for (const g of meshAll()) g.clear(stage.content.w, stage.content.h, 1)
-  meshBottom = null
-  meshTop = null
+  let nextBottom: MeshGarment | null = null
+  let nextTop: MeshGarment | null = null
   try {
-    if (look.fit.bottom) meshBottom = new MeshGarment(look.fit.bottom, layerBottom)
-    if (look.fit.top) meshTop = new MeshGarment(look.fit.top, layerTop)
+    if (look.fit.bottom) nextBottom = new MeshGarment(look.fit.bottom, layerBottom)
+    if (look.fit.top) nextTop = new MeshGarment(look.fit.top, layerTop)
+    await Promise.all([nextBottom, nextTop].filter(Boolean).map((g) => g!.load()))
   } catch (e) {
-    console.warn('[mesh] WebGL 不可用，退回方案 B', e)
+    nextBottom?.dispose()
+    nextTop?.dispose()
+    console.warn('[wardrobe] 整套换装失败', themeId, lookId, e)
     return
   }
-  await Promise.all(meshAll().map((g) => g.load().catch((e) => console.warn('[mesh]', g.cfg.id, e))))
+  for (const slot of ['top', 'bottom'] as const) {
+    dropArriving(slot)
+    dropFalling(slot)
+  }
+  for (const g of meshAll()) {
+    g.clear(stage.content.w, stage.content.h, 1)
+    g.dispose()
+  }
+  meshBottom = nextBottom
+  meshTop = nextTop
+  currentLook = { theme: themeId, look: lookId }
   // 开局这套本来就穿在身上，胶带当场贴好，和后面换上来的保持一致
   for (const g of meshAll()) tapeFrom.set(g, performance.now())
   ;(window as unknown as { __mesh: MeshGarment | null }).__mesh = meshTop
@@ -1355,7 +1368,7 @@ propsEl.append(palmRing)
 const palmBadge = document.createElement('div')
 palmBadge.id = 'palm-badge'
 palmBadge.className = 'hint-tag'
-palmBadge.innerHTML = '<span class="side is-left">◀ 上衣</span><span class="side is-right">下装 ▶</span>'
+palmBadge.innerHTML = '<span class="side is-left">◀ 上一套</span><span class="side is-right">下一套 ▶</span>'
 propsEl.append(palmBadge)
 
 /** 举稳阶段（还没解锁）跟着 palmRing 一起显示的待命提示 */
@@ -1407,23 +1420,16 @@ function flashPalmSide(side: 'left' | 'right') {
   )
 }
 
-async function cycleGarment(slot: 'top' | 'bottom') {
+async function cycleLook(direction: -1 | 1) {
   if (palmChanging) return
-  // 主题看这个槽位身上现在这件自己的 id，不看 activeThemeId ——
-  // 文件夹允许上衣下装分别跨主题混搭，共用一个「最近穿的主题」会把另一条槽位带错主题。
-  const current = slot === 'top' ? meshTop?.cfg.id : meshBottom?.cfg.id
-  const themeId = current?.split('-look')[0]
-  if (!themeId) return
   palmChanging = true
   try {
     const manifest = await loadWardrobe()
-    const theme = manifest.themes.find((t) => t.id === themeId)
-    if (!theme) return
-    const options = theme.looks.map((l) => l.fit[slot]).filter(Boolean) as MeshGarmentConfig[]
-    if (options.length < 2) return
-    const at = options.findIndex((cfg) => cfg.id === current)
-    const next = options[(at + 1 + options.length) % options.length]
-    await wearFit(slot, next)
+    const looks = manifest.themes.flatMap((theme) => theme.looks.map((look) => ({ theme: theme.id, look: look.id })))
+    if (!looks.length) return
+    const at = looks.findIndex((item) => item.theme === currentLook?.theme && item.look === currentLook.look)
+    const next = looks[(at + direction + looks.length) % looks.length]
+    await loadLook(next.theme, next.look)
   } finally {
     palmChanging = false
   }
@@ -1474,10 +1480,10 @@ function handleQuickChange(hands: HandLandmarkerResult['landmarks'] | undefined,
   palmTriggered = true
   if (tilt < 0) {
     flashPalmSide('left')
-    void cycleGarment('top')
+    void cycleLook(-1)
   } else {
     flashPalmSide('right')
-    void cycleGarment('bottom')
+    void cycleLook(1)
   }
 }
 
