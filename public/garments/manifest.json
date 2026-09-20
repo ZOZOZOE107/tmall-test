@@ -12,6 +12,7 @@
         {
           "id": "look1",
           "fullOverlay": "/garments/intellect/look1/whole.png",
+          "fullOverlayFit": { "widthByShoulders": 1.5, "shoulderX": 0.54, "shoulderY": 0.04 },
           "pieces": {
             "top": "/garments/intellect/look1/top.png",
             "bottom": "/garments/intellect/look1/bottom.png",
@@ -155,7 +156,7 @@
         {
           "id": "look2",
           "fullOverlay": "/garments/intellect/look2/whole.png",
-          "fullOverlayFit": { "widthByShoulders": 3.5, "shoulderX": 0.53, "shoulderY": 0.10 },
+          "fullOverlayFit": { "widthByShoulders": 3.07, "shoulderX": 0.53, "shoulderY": 0.10 },
           "pieces": {
             "top": "/garments/intellect/look2/top.png",
             "bottom": "/garments/intellect/look2/bottom.png",
@@ -264,7 +265,7 @@
         {
           "id": "look1",
           "fullOverlay": "/garments/editor/look1/whole.png",
-          "fullOverlayFit": { "widthByShoulders": 2.25, "shoulderX": 0.53, "shoulderY": 0.19 },
+          "fullOverlayFit": { "widthByShoulders": 2.08, "shoulderX": 0.53, "shoulderY": 0.19 },
           "pieces": {
             "top": "/garments/editor/look1/top.png",
             "bottom": "/garments/editor/look1/bottom.png",
@@ -416,7 +417,7 @@
         {
           "id": "look2",
           "fullOverlay": "/garments/editor/look2/whole.png",
-          "fullOverlayFit": { "widthByShoulders": 3.5, "shoulderX": 0.53, "shoulderY": 0.10 },
+          "fullOverlayFit": { "widthByShoulders": 2.98, "shoulderX": 0.53, "shoulderY": 0.10 },
           "pieces": {
             "top": "/garments/editor/look2/top.png",
             "bottom": "/garments/editor/look2/bottom.png",
@@ -579,7 +580,7 @@
         {
           "id": "look1",
           "fullOverlay": "/garments/homebody/look1/whole.png",
-          "fullOverlayFit": { "widthByShoulders": 3.5, "shoulderX": 0.53, "shoulderY": 0.10 },
+          "fullOverlayFit": { "widthByShoulders": 3.06, "shoulderX": 0.53, "shoulderY": 0.10 },
           "pieces": {
             "top": "/garments/homebody/look1/top.png",
             "full": "/garments/homebody/look1/full.jpg"
@@ -1039,7 +1040,7 @@
         {
           "id": "look2",
           "fullOverlay": "/garments/outdoor/look2/whole.png",
-          "fullOverlayFit": { "widthByShoulders": 4.0, "shoulderX": 0.50, "shoulderY": 0.09 },
+          "fullOverlayFit": { "widthByShoulders": 3.42, "shoulderX": 0.5, "shoulderY": 0.09 },
           "pieces": {
             "top": "/garments/outdoor/look2/top.png",
             "bottom": "/garments/outdoor/look2/bottom.png",
