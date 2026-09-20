@@ -1,0 +1,82 @@
+/* ═══════════════════════════════════════════════════════════════════
+   开发工具栏 token —— Figma「AOE / Tokens」dev/ 命名空间的镜像。
+   值从 Figma 回读同步，不要在这里改。
+   ═══════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── dev / surface ───────────────────────────────────────────── */
+  --dev-surface-panel: rgba(110, 107, 51, 0.17);
+  --dev-surface-panel-tint: rgba(96, 95, 76, 0.3); /* Body 上那层未绑定的罩色 */
+  --dev-surface-raised: rgba(40, 40, 48, 0.95);
+  --dev-surface-control: rgba(66, 79, 33, 0.13);
+  --dev-surface-control-hover: rgba(255, 255, 255, 0.12);
+  --dev-surface-accent-soft: rgba(151, 172, 85, 0.22);
+
+  /* ── dev / border ────────────────────────────────────────────── */
+  --dev-border-subtle: rgba(255, 255, 255, 0.1);
+  --dev-border-default: rgba(255, 255, 255, 0.14);
+  --dev-border-strong: rgba(93, 93, 93, 0.22);
+  --dev-checkbox-border: #ebebeb;
+
+  /* ── dev / text ──────────────────────────────────────────────── */
+  --dev-text-1: #ffffff;
+  --dev-text-2: rgba(255, 255, 255, 0.85);
+  --dev-text-3: rgba(255, 255, 255, 0.65);
+  --dev-text-4: #ffffff;
+  --dev-text-5: rgba(255, 255, 255, 0.32);
+
+  /* ── dev / accent · danger ───────────────────────────────────── */
+  --dev-accent: var(--color-folder-blue);
+  --dev-danger-text: #799226;
+  --dev-danger-border: #83ac2c;
+
+  /* ── dev / size ──────────────────────────────────────────────── */
+  --dev-size-panel-width: 150px;
+  --dev-size-body-padding-top: 25px;
+  --dev-size-body-padding-left: 14px;
+  --dev-size-body-padding-right: 12px;
+  --dev-size-body-padding-bottom: 12px;
+  --dev-size-handle-width: 22px;
+  --dev-size-handle-height: 100px;
+  --dev-size-handle-closed-height: 126px;
+  --dev-size-control-height: 28px;
+  --dev-size-checkbox: 11px;
+  --dev-size-icon: 14px;
+  --dev-size-sec-icon: 20px;
+  --dev-size-scrollbar: 6px;
+  --dev-size-glass-blur: 74px;
+  --dev-size-handle-blur: 12px;
+
+  /* ── dev / radius ────────────────────────────────────────────── */
+  --dev-radius-md: 5px;
+  --dev-radius-panel: 10px;
+  --dev-radius-handle: 8px;
+
+  /* ── dev / font ──────────────────────────────────────────────── */
+  --dev-font-family: var(--font-family);
+  --dev-font-family-mono: var(--font-family-mono);
+  --dev-font-xs: 10px;
+  --dev-font-sm: 12px;
+  --dev-font-md: 12px;
+  --dev-font-lg: 14px;
+  --dev-font-weight: 400;
+  --dev-font-weight-bold: 700;
+  --dev-letter-spacing: 0;
+  --dev-letter-spacing-wide: 1px;
+  --dev-line-height-xs: 16px;
+  --dev-line-height-sm: 17px;
+  --dev-line-height-md: 18px;
+  --dev-line-height-lg: 20px;
+
+  /* ── dev / effect ────────────────────────────────────────────── */
+  /* Body 上的红色径向辉光，Figma 里是 20% 不透明度的 radial gradient */
+  --dev-glow: radial-gradient(
+    92.5px 360px at 50% 50%,
+    rgba(255, 0, 54, 0.2) 7%,
+    rgba(249, 57, 99, 0.15) 31%,
+    rgba(242, 115, 144, 0.1) 54%,
+    rgba(229, 229, 235, 0) 100%
+  );
+  /* Figma 的 NOISE 效果（黑 25%）在 CSS 里没有等价物，用 feTurbulence 贴图代替 */
+  --dev-noise: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='120' height='120' filter='url(%23n)' opacity='0.25'/></svg>");
+}

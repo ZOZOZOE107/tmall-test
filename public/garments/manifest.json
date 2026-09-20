@@ -1,0 +1,1180 @@
+{
+  "version": 1,
+  "themes": [
+    {
+      "id": "intellect",
+      "name": "质感天然",
+      "scene": "职场通勤",
+      "brand": "鄂尔多斯 1980",
+      "tagline": "今天的会议，由质感主持",
+      "color": "color/persona/intellect",
+      "looks": [
+        {
+          "id": "look1",
+          "pieces": {
+            "top": "/garments/intellect/look1/top.png",
+            "bottom": "/garments/intellect/look1/bottom.png",
+            "full": "/garments/intellect/look1/full.jpg"
+          },
+          "fit": {
+            "top": {
+              "rig": "top",
+              "rest": {
+                "rShoulder": {
+                  "x": 0.2974,
+                  "y": 0.1252
+                },
+                "lShoulder": {
+                  "x": 0.7026,
+                  "y": 0.1252
+                },
+                "rElbow": {
+                  "x": 0.1408,
+                  "y": 0.5871
+                },
+                "lElbow": {
+                  "x": 0.8592,
+                  "y": 0.5871
+                },
+                "rWrist": {
+                  "x": 0.0446,
+                  "y": 0.9562
+                },
+                "lWrist": {
+                  "x": 0.9554,
+                  "y": 0.9562
+                },
+                "rHip": {
+                  "x": 0.2904,
+                  "y": 0.8026
+                },
+                "lHip": {
+                  "x": 0.7096,
+                  "y": 0.8026
+                }
+              },
+              "widthEase": 1,
+              "lengthEase": 0.82,
+              "grid": 24,
+              "torsoBias": 2.2,
+              "falloff": 3,
+              "src": "/garments/intellect/look1/top.png",
+              "id": "intellect-look1-top",
+              "tuned": true,
+              "offsetY": -0.05,
+              "seam": {
+                "r": [
+                  {
+                    "x": 0.2939,
+                    "y": 0.205
+                  },
+                  {
+                    "x": 0.2109,
+                    "y": 0.6641
+                  },
+                  {
+                    "x": 0.1943,
+                    "y": 0.9745
+                  }
+                ],
+                "l": [
+                  {
+                    "x": 0.7061,
+                    "y": 0.205
+                  },
+                  {
+                    "x": 0.7891,
+                    "y": 0.6641
+                  },
+                  {
+                    "x": 0.8057,
+                    "y": 0.9745
+                  }
+                ]
+              },
+              "seamPenalty": 5,
+              "pins": {
+                "r": [
+                  {
+                    "x": 0.3796,
+                    "y": 0.7071
+                  }
+                ],
+                "l": [
+                  {
+                    "x": 0.6204,
+                    "y": 0.7071
+                  }
+                ]
+              },
+              "pinRadius": 0.165,
+              "rigid": true
+            },
+            "bottom": {
+              "rig": "bottom",
+              "rest": {
+                "rHip": {
+                  "x": 0.3566,
+                  "y": 0.2781
+                },
+                "lHip": {
+                  "x": 0.6434,
+                  "y": 0.2781
+                },
+                "rKnee": {
+                  "x": 0.3144,
+                  "y": 0.6858
+                },
+                "lKnee": {
+                  "x": 0.6856,
+                  "y": 0.6858
+                },
+                "rAnkle": {
+                  "x": 0.2845,
+                  "y": 1
+                },
+                "lAnkle": {
+                  "x": 0.7155,
+                  "y": 1
+                }
+              },
+              "widthEase": 1,
+              "lengthEase": 1,
+              "grid": 24,
+              "torsoBias": 1.8,
+              "falloff": 3,
+              "src": "/garments/intellect/look1/bottom.png",
+              "id": "intellect-look1-bottom",
+              "tuned": true,
+              "offsetY": 0,
+              "rigid": true
+            }
+          }
+        },
+        {
+          "id": "look2",
+          "pieces": {
+            "top": "/garments/intellect/look2/top.png",
+            "bottom": "/garments/intellect/look2/bottom.png",
+            "full": "/garments/intellect/look2/full.jpg"
+          },
+          "fit": {
+            "top": {
+              "rig": "top",
+              "rest": {
+                "rShoulder": {
+                  "x": 0.3327,
+                  "y": 0.1606
+                },
+                "lShoulder": {
+                  "x": 0.6673,
+                  "y": 0.1606
+                },
+                "rElbow": {
+                  "x": 0.2687,
+                  "y": 0.3755
+                },
+                "lElbow": {
+                  "x": 0.7313,
+                  "y": 0.3755
+                },
+                "rWrist": {
+                  "x": 0.2038,
+                  "y": 0.5637
+                },
+                "lWrist": {
+                  "x": 0.7962,
+                  "y": 0.5637
+                },
+                "rHip": {
+                  "x": 0.3347,
+                  "y": 0.5646
+                },
+                "lHip": {
+                  "x": 0.6653,
+                  "y": 0.5646
+                }
+              },
+              "widthEase": 1.05,
+              "lengthEase": 1.01,
+              "grid": 24,
+              "torsoBias": 1.8,
+              "falloff": 3.4,
+              "src": "/garments/intellect/look2/top.png",
+              "id": "intellect-look2-top",
+              "tuned": true,
+              "offsetY": -0.01,
+              "rigid": true
+            },
+            "bottom": {
+              "rig": "bottom",
+              "rest": {
+                "rHip": {
+                  "x": 0.3908,
+                  "y": 0.1811
+                },
+                "lHip": {
+                  "x": 0.6092,
+                  "y": 0.1811
+                },
+                "rKnee": {
+                  "x": 0.34,
+                  "y": 0.6015
+                },
+                "lKnee": {
+                  "x": 0.66,
+                  "y": 0.6015
+                },
+                "rAnkle": {
+                  "x": 0.2956,
+                  "y": 0.9526
+                },
+                "lAnkle": {
+                  "x": 0.7044,
+                  "y": 0.9526
+                }
+              },
+              "widthEase": 1.02,
+              "lengthEase": 1.11,
+              "grid": 22,
+              "torsoBias": 0.7,
+              "falloff": 3,
+              "src": "/garments/intellect/look2/bottom.png",
+              "id": "intellect-look2-bottom",
+              "tuned": true,
+              "offsetY": 0,
+              "rigid": true
+            }
+          }
+        }
+      ],
+      "logo": "/garments/intellect/logo.png"
+    },
+    {
+      "id": "editor",
+      "name": "织造美学",
+      "scene": "约会看展",
+      "brand": "MO&Co.",
+      "tagline": "不追趋势，负责编辑趋势",
+      "color": "color/persona/editor",
+      "looks": [
+        {
+          "id": "look1",
+          "pieces": {
+            "top": "/garments/editor/look1/top.png",
+            "bottom": "/garments/editor/look1/bottom.png",
+            "full": "/garments/editor/look1/full.jpg"
+          },
+          "fit": {
+            "top": {
+              "rig": "top",
+              "rest": {
+                "rShoulder": {
+                  "x": 0.3153,
+                  "y": 0.2109
+                },
+                "lShoulder": {
+                  "x": 0.6847,
+                  "y": 0.2109
+                },
+                "rElbow": {
+                  "x": 0.2473,
+                  "y": 0.5799
+                },
+                "lElbow": {
+                  "x": 0.7527,
+                  "y": 0.5799
+                },
+                "rWrist": {
+                  "x": 0.231,
+                  "y": 0.9094
+                },
+                "lWrist": {
+                  "x": 0.769,
+                  "y": 0.9094
+                },
+                "rHip": {
+                  "x": 0.3251,
+                  "y": 0.8656
+                },
+                "lHip": {
+                  "x": 0.6749,
+                  "y": 0.8656
+                }
+              },
+              "widthEase": 1,
+              "lengthEase": 0.9,
+              "grid": 24,
+              "torsoBias": 2.2,
+              "falloff": 3,
+              "src": "/garments/editor/look1/top.png",
+              "id": "editor-look1-top",
+              "tuned": true,
+              "offsetY": -0.03,
+              "seam": {
+                "r": [
+                  {
+                    "x": 0.3071,
+                    "y": 0.3029
+                  },
+                  {
+                    "x": 0.3316,
+                    "y": 0.6997
+                  },
+                  {
+                    "x": 0.3205,
+                    "y": 0.9952
+                  }
+                ],
+                "l": [
+                  {
+                    "x": 0.6929,
+                    "y": 0.3029
+                  },
+                  {
+                    "x": 0.6684,
+                    "y": 0.6997
+                  },
+                  {
+                    "x": 0.6795,
+                    "y": 0.9952
+                  }
+                ]
+              },
+              "seamPenalty": 5,
+              "pins": {
+                "r": [
+                  {
+                    "x": 0.4027,
+                    "y": 0.592
+                  },
+                  {
+                    "x": 0.4216,
+                    "y": 0.7357
+                  }
+                ],
+                "l": [
+                  {
+                    "x": 0.5973,
+                    "y": 0.592
+                  },
+                  {
+                    "x": 0.5784,
+                    "y": 0.7357
+                  }
+                ]
+              },
+              "pinRadius": 0.08,
+              "rigid": true
+            },
+            "bottom": {
+              "rig": "bottom",
+              "rest": {
+                "rHip": {
+                  "x": 0.3435,
+                  "y": 0.3749
+                },
+                "lHip": {
+                  "x": 0.6565,
+                  "y": 0.3749
+                },
+                "rKnee": {
+                  "x": 0.2837,
+                  "y": 0.8975
+                },
+                "lKnee": {
+                  "x": 0.7163,
+                  "y": 0.8975
+                },
+                "rAnkle": {
+                  "x": 0.2665,
+                  "y": 1
+                },
+                "lAnkle": {
+                  "x": 0.7335,
+                  "y": 1
+                }
+              },
+              "widthEase": 1.13,
+              "lengthEase": 1.25,
+              "grid": 24,
+              "torsoBias": 1.6,
+              "falloff": 2.4,
+              "src": "/garments/editor/look1/bottom.png",
+              "id": "editor-look1-bottom",
+              "tuned": true,
+              "offsetY": -0.01,
+              "rigid": true
+            }
+          }
+        },
+        {
+          "id": "look2",
+          "pieces": {
+            "top": "/garments/editor/look2/top.png",
+            "bottom": "/garments/editor/look2/bottom.png",
+            "full": "/garments/editor/look2/full.jpg"
+          },
+          "fit": {
+            "top": {
+              "rig": "top",
+              "rest": {
+                "rShoulder": {
+                  "x": 0.3327,
+                  "y": 0.1994
+                },
+                "lShoulder": {
+                  "x": 0.6673,
+                  "y": 0.1994
+                },
+                "rElbow": {
+                  "x": 0.2589,
+                  "y": 0.5656
+                },
+                "lElbow": {
+                  "x": 0.7411,
+                  "y": 0.5656
+                },
+                "rWrist": {
+                  "x": 0.2229,
+                  "y": 0.9117
+                },
+                "lWrist": {
+                  "x": 0.7771,
+                  "y": 0.9117
+                },
+                "rHip": {
+                  "x": 0.3504,
+                  "y": 0.7287
+                },
+                "lHip": {
+                  "x": 0.6496,
+                  "y": 0.7287
+                }
+              },
+              "widthEase": 0.96,
+              "lengthEase": 0.87,
+              "grid": 24,
+              "torsoBias": 1.8,
+              "falloff": 3,
+              "src": "/garments/editor/look2/top.png",
+              "id": "editor-look2-top",
+              "tuned": true,
+              "offsetY": 0,
+              "seam": {
+                "r": [
+                  {
+                    "x": 0.3689,
+                    "y": 0.2184
+                  },
+                  {
+                    "x": 0.338,
+                    "y": 0.5121
+                  },
+                  {
+                    "x": 0.2904,
+                    "y": 1
+                  }
+                ],
+                "l": [
+                  {
+                    "x": 0.6311,
+                    "y": 0.2184
+                  },
+                  {
+                    "x": 0.662,
+                    "y": 0.5121
+                  },
+                  {
+                    "x": 0.7096,
+                    "y": 1
+                  }
+                ]
+              },
+              "seamPenalty": 5,
+              "pins": {
+                "r": [
+                  {
+                    "x": 0.416,
+                    "y": 0.5716
+                  },
+                  {
+                    "x": 0.4343,
+                    "y": 0.6425
+                  }
+                ],
+                "l": [
+                  {
+                    "x": 0.584,
+                    "y": 0.5716
+                  },
+                  {
+                    "x": 0.5657,
+                    "y": 0.6425
+                  }
+                ]
+              },
+              "pinRadius": 0.08,
+              "rigid": true
+            },
+            "bottom": {
+              "rig": "bottom",
+              "rest": {
+                "rHip": {
+                  "x": 0.4118,
+                  "y": 0.2197
+                },
+                "lHip": {
+                  "x": 0.5882,
+                  "y": 0.2197
+                },
+                "rKnee": {
+                  "x": 0.3515,
+                  "y": 0.7726
+                },
+                "lKnee": {
+                  "x": 0.6485,
+                  "y": 0.7726
+                },
+                "rAnkle": {
+                  "x": 0.3429,
+                  "y": 1
+                },
+                "lAnkle": {
+                  "x": 0.6571,
+                  "y": 1
+                }
+              },
+              "widthEase": 0.74,
+              "lengthEase": 1,
+              "grid": 24,
+              "torsoBias": 1.8,
+              "falloff": 3,
+              "src": "/garments/editor/look2/bottom.png",
+              "id": "editor-look2-bottom",
+              "tuned": true,
+              "offsetY": 0,
+              "rigid": true
+            }
+          }
+        }
+      ],
+      "logo": "/garments/editor/logo.png"
+    },
+    {
+      "id": "homebody",
+      "name": "轻护无忧",
+      "scene": "居家生活",
+      "brand": "优衣库 & Ubras",
+      "tagline": "舒服不是退让，是一种选择",
+      "color": "color/persona/homebody",
+      "looks": [
+        {
+          "id": "look1",
+          "pieces": {
+            "top": "/garments/homebody/look1/top.png",
+            "full": "/garments/homebody/look1/full.jpg"
+          },
+          "fit": {
+            "top": {
+              "rig": "top",
+              "rest": {
+                "rShoulder": {
+                  "x": 0.2884,
+                  "y": 0.1895
+                },
+                "lShoulder": {
+                  "x": 0.7116,
+                  "y": 0.1895
+                },
+                "rElbow": {
+                  "x": 0.2017,
+                  "y": 0.6059
+                },
+                "lElbow": {
+                  "x": 0.7983,
+                  "y": 0.6059
+                },
+                "rWrist": {
+                  "x": 0.1373,
+                  "y": 0.9673
+                },
+                "lWrist": {
+                  "x": 0.8627,
+                  "y": 0.9673
+                },
+                "rHip": {
+                  "x": 0.3416,
+                  "y": 0.886
+                },
+                "lHip": {
+                  "x": 0.6584,
+                  "y": 0.886
+                }
+              },
+              "widthEase": 1,
+              "lengthEase": 0.9,
+              "grid": 24,
+              "torsoBias": 2.2,
+              "falloff": 3,
+              "src": "/garments/homebody/look1/top.png",
+              "id": "homebody-look1-top",
+              "tuned": true,
+              "offsetY": 0,
+              "seam": {
+                "r": [
+                  {
+                    "x": 0.3055,
+                    "y": 0.2993
+                  },
+                  {
+                    "x": 0.2854,
+                    "y": 0.63
+                  },
+                  {
+                    "x": 0.2588,
+                    "y": 1
+                  }
+                ],
+                "l": [
+                  {
+                    "x": 0.6945,
+                    "y": 0.2993
+                  },
+                  {
+                    "x": 0.7146,
+                    "y": 0.63
+                  },
+                  {
+                    "x": 0.7412,
+                    "y": 1
+                  }
+                ]
+              },
+              "seamPenalty": 5,
+              "pins": {
+                "r": [
+                  {
+                    "x": 0.3686,
+                    "y": 0.7991
+                  },
+                  {
+                    "x": 0.3934,
+                    "y": 0.607
+                  }
+                ],
+                "l": [
+                  {
+                    "x": 0.6314,
+                    "y": 0.7991
+                  },
+                  {
+                    "x": 0.6066,
+                    "y": 0.607
+                  }
+                ]
+              },
+              "pinRadius": 0.1,
+              "rigid": true
+            }
+          }
+        },
+        {
+          "id": "look2",
+          "pieces": {
+            "top": "/garments/homebody/look2/top.png",
+            "bottom": "/garments/homebody/look2/bottom.png",
+            "inner": "/garments/homebody/look2/inner.png",
+            "full": "/garments/homebody/look2/full.jpg"
+          },
+          "fit": {
+            "top": {
+              "rig": "top",
+              "rest": {
+                "rShoulder": {
+                  "x": 0.3104,
+                  "y": 0.2562
+                },
+                "lShoulder": {
+                  "x": 0.6896,
+                  "y": 0.2562
+                },
+                "rElbow": {
+                  "x": 0.2267,
+                  "y": 0.6058
+                },
+                "lElbow": {
+                  "x": 0.7733,
+                  "y": 0.6058
+                },
+                "rWrist": {
+                  "x": 0.2271,
+                  "y": 1
+                },
+                "lWrist": {
+                  "x": 0.7729,
+                  "y": 1
+                },
+                "rHip": {
+                  "x": 0.3545,
+                  "y": 0.8731
+                },
+                "lHip": {
+                  "x": 0.6455,
+                  "y": 0.8731
+                }
+              },
+              "widthEase": 0.99,
+              "lengthEase": 0.83,
+              "grid": 24,
+              "torsoBias": 1.4,
+              "falloff": 2.3,
+              "src": "/garments/homebody/look2/top.png",
+              "id": "homebody-look2-top",
+              "tuned": true,
+              "offsetY": 0.02,
+              "seam": {
+                "r": [
+                  {
+                    "x": 0.3123,
+                    "y": 0.3598
+                  },
+                  {
+                    "x": 0.2995,
+                    "y": 0.5965
+                  },
+                  {
+                    "x": 0.3107,
+                    "y": 0.8384
+                  }
+                ],
+                "l": [
+                  {
+                    "x": 0.6877,
+                    "y": 0.3598
+                  },
+                  {
+                    "x": 0.7005,
+                    "y": 0.5965
+                  },
+                  {
+                    "x": 0.6893,
+                    "y": 0.8384
+                  }
+                ]
+              },
+              "seamPenalty": 5,
+              "rigid": true
+            },
+            "bottom": {
+              "rig": "bottom",
+              "rest": {
+                "rHip": {
+                  "x": 0.4134,
+                  "y": 0.1595
+                },
+                "lHip": {
+                  "x": 0.5866,
+                  "y": 0.1595
+                },
+                "rKnee": {
+                  "x": 0.376,
+                  "y": 0.6263
+                },
+                "lKnee": {
+                  "x": 0.624,
+                  "y": 0.6263
+                },
+                "rAnkle": {
+                  "x": 0.3633,
+                  "y": 1
+                },
+                "lAnkle": {
+                  "x": 0.6367,
+                  "y": 1
+                }
+              },
+              "widthEase": 1,
+              "lengthEase": 1,
+              "grid": 24,
+              "torsoBias": 1.8,
+              "falloff": 3,
+              "src": "/garments/homebody/look2/bottom.png",
+              "id": "homebody-look2-bottom",
+              "tuned": true,
+              "offsetY": 0,
+              "rigid": true
+            },
+            "inner": {
+              "rig": "top",
+              "rest": {
+                "rShoulder": {
+                  "x": 0.3064,
+                  "y": 0.2518
+                },
+                "lShoulder": {
+                  "x": 0.6936,
+                  "y": 0.2518
+                },
+                "rElbow": {
+                  "x": 0.2662,
+                  "y": 0.5912
+                },
+                "lElbow": {
+                  "x": 0.7338,
+                  "y": 0.5912
+                },
+                "rWrist": {
+                  "x": 0.2455,
+                  "y": 0.9797
+                },
+                "lWrist": {
+                  "x": 0.7545,
+                  "y": 0.9797
+                },
+                "rHip": {
+                  "x": 0.3795,
+                  "y": 0.8159
+                },
+                "lHip": {
+                  "x": 0.6205,
+                  "y": 0.8159
+                }
+              },
+              "widthEase": 1,
+              "lengthEase": 0.92,
+              "grid": 24,
+              "torsoBias": 2.2,
+              "falloff": 3.1,
+              "src": "/garments/homebody/look2/inner.png",
+              "id": "homebody-look2-inner",
+              "tuned": true,
+              "offsetY": 0.04,
+              "rigid": true
+            }
+          }
+        }
+      ],
+      "logo": "/garments/homebody/logo.png"
+    },
+    {
+      "id": "outdoor",
+      "name": "温感随行",
+      "scene": "城野户外",
+      "brand": "Navigare 纳维凯尔",
+      "tagline": "今天的路线：从城市到风里",
+      "color": "color/persona/outdoor",
+      "looks": [
+        {
+          "id": "look1",
+          "pieces": {
+            "top": "/garments/outdoor/look1/top.png",
+            "bottom": "/garments/outdoor/look1/bottom.png",
+            "full": "/garments/outdoor/look1/full.jpg"
+          },
+          "fit": {
+            "top": {
+              "rig": "top",
+              "rest": {
+                "rShoulder": {
+                  "x": 0.3258,
+                  "y": 0.1752
+                },
+                "lShoulder": {
+                  "x": 0.6742,
+                  "y": 0.1752
+                },
+                "rElbow": {
+                  "x": 0.1563,
+                  "y": 0.6214
+                },
+                "lElbow": {
+                  "x": 0.8437,
+                  "y": 0.6214
+                },
+                "rWrist": {
+                  "x": 0.0698,
+                  "y": 0.9532
+                },
+                "lWrist": {
+                  "x": 0.9302,
+                  "y": 0.9532
+                },
+                "rHip": {
+                  "x": 0.3257,
+                  "y": 0.8591
+                },
+                "lHip": {
+                  "x": 0.6743,
+                  "y": 0.8591
+                }
+              },
+              "widthEase": 0.81,
+              "lengthEase": 0.73,
+              "grid": 24,
+              "torsoBias": 2.2,
+              "falloff": 3,
+              "src": "/garments/outdoor/look1/top.png",
+              "id": "outdoor-look1-top",
+              "tuned": true,
+              "offsetY": -0.01,
+              "seam": {
+                "r": [
+                  {
+                    "x": 0.2496,
+                    "y": 0.2491
+                  },
+                  {
+                    "x": 0.21,
+                    "y": 0.6385
+                  },
+                  {
+                    "x": 0.1883,
+                    "y": 0.9177
+                  }
+                ],
+                "l": [
+                  {
+                    "x": 0.7504,
+                    "y": 0.2491
+                  },
+                  {
+                    "x": 0.79,
+                    "y": 0.6385
+                  },
+                  {
+                    "x": 0.8117,
+                    "y": 0.9177
+                  }
+                ]
+              },
+              "seamPenalty": 1.5,
+              "pins": {
+                "r": [
+                  {
+                    "x": 0.3309,
+                    "y": 0.7959
+                  },
+                  {
+                    "x": 0.3467,
+                    "y": 0.6125
+                  },
+                  {
+                    "x": 0.3689,
+                    "y": 0.4351
+                  }
+                ],
+                "l": [
+                  {
+                    "x": 0.6691,
+                    "y": 0.7959
+                  },
+                  {
+                    "x": 0.6533,
+                    "y": 0.6125
+                  },
+                  {
+                    "x": 0.6311,
+                    "y": 0.4351
+                  }
+                ]
+              },
+              "pinRadius": 0.13,
+              "rigid": true
+            },
+            "bottom": {
+              "rig": "bottom",
+              "rest": {
+                "rHip": {
+                  "x": 0.3698,
+                  "y": 0.1869
+                },
+                "lHip": {
+                  "x": 0.6302,
+                  "y": 0.1869
+                },
+                "rKnee": {
+                  "x": 0.343,
+                  "y": 0.5198
+                },
+                "lKnee": {
+                  "x": 0.657,
+                  "y": 0.5198
+                },
+                "rAnkle": {
+                  "x": 0.365,
+                  "y": 0.96
+                },
+                "lAnkle": {
+                  "x": 0.635,
+                  "y": 0.96
+                }
+              },
+              "widthEase": 1.16,
+              "lengthEase": 1.43,
+              "grid": 24,
+              "torsoBias": 1.9,
+              "falloff": 3,
+              "src": "/garments/outdoor/look1/bottom.png",
+              "id": "outdoor-look1-bottom",
+              "tuned": true,
+              "offsetY": 0.03,
+              "rigid": true
+            }
+          }
+        },
+        {
+          "id": "look2",
+          "pieces": {
+            "top": "/garments/outdoor/look2/top.png",
+            "bottom": "/garments/outdoor/look2/bottom.png",
+            "full": "/garments/outdoor/look2/full.jpg"
+          },
+          "fit": {
+            "top": {
+              "rig": "top",
+              "rest": {
+                "rShoulder": {
+                  "x": 0.2611,
+                  "y": 0.2002
+                },
+                "lShoulder": {
+                  "x": 0.7389,
+                  "y": 0.2002
+                },
+                "rElbow": {
+                  "x": 0.1526,
+                  "y": 0.5951
+                },
+                "lElbow": {
+                  "x": 0.8474,
+                  "y": 0.5951
+                },
+                "rWrist": {
+                  "x": 0.0857,
+                  "y": 0.9548
+                },
+                "lWrist": {
+                  "x": 0.9143,
+                  "y": 0.9548
+                },
+                "rHip": {
+                  "x": 0.3206,
+                  "y": 0.9143
+                },
+                "lHip": {
+                  "x": 0.6794,
+                  "y": 0.9143
+                }
+              },
+              "widthEase": 1,
+              "lengthEase": 0.95,
+              "grid": 24,
+              "torsoBias": 2.2,
+              "falloff": 3,
+              "src": "/garments/outdoor/look2/top.png",
+              "id": "outdoor-look2-top",
+              "tuned": true,
+              "offsetY": 0,
+              "seam": {
+                "r": [
+                  {
+                    "x": 0.2438,
+                    "y": 0.3769
+                  },
+                  {
+                    "x": 0.2231,
+                    "y": 0.6126
+                  },
+                  {
+                    "x": 0.2085,
+                    "y": 0.9489
+                  }
+                ],
+                "l": [
+                  {
+                    "x": 0.7562,
+                    "y": 0.3769
+                  },
+                  {
+                    "x": 0.7769,
+                    "y": 0.6126
+                  },
+                  {
+                    "x": 0.7915,
+                    "y": 0.9489
+                  }
+                ]
+              },
+              "seamPenalty": 5,
+              "pins": {
+                "r": [
+                  {
+                    "x": 0.2908,
+                    "y": 0.7777
+                  },
+                  {
+                    "x": 0.2372,
+                    "y": 0.9358
+                  }
+                ],
+                "l": [
+                  {
+                    "x": 0.7092,
+                    "y": 0.7777
+                  },
+                  {
+                    "x": 0.7628,
+                    "y": 0.9358
+                  }
+                ]
+              },
+              "pinRadius": 0.08,
+              "rigid": true
+            },
+            "bottom": {
+              "rig": "bottom",
+              "rest": {
+                "rHip": {
+                  "x": 0.396,
+                  "y": 0.1885
+                },
+                "lHip": {
+                  "x": 0.604,
+                  "y": 0.1885
+                },
+                "rKnee": {
+                  "x": 0.3761,
+                  "y": 0.5872
+                },
+                "lKnee": {
+                  "x": 0.6239,
+                  "y": 0.5872
+                },
+                "rAnkle": {
+                  "x": 0.3825,
+                  "y": 0.9405
+                },
+                "lAnkle": {
+                  "x": 0.6175,
+                  "y": 0.9405
+                }
+              },
+              "widthEase": 1.09,
+              "lengthEase": 1.14,
+              "grid": 22,
+              "torsoBias": 1.5,
+              "falloff": 2.5,
+              "src": "/garments/outdoor/look2/bottom.png",
+              "id": "outdoor-look2-bottom",
+              "tuned": true,
+              "offsetY": 0,
+              "rigid": true
+            }
+          }
+        }
+      ],
+      "logo": "/garments/outdoor/logo.png"
+    }
+  ]
+}
