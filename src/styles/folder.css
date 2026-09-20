@@ -272,26 +272,6 @@
   top: 0;
 }
 
-/* ── 主题赛道词语 ───────────────────────────────────────────────
- * 上衣下装凑成同一个主题整套时，在顶部偏下一点的位置居中亮出来，提示这是
- * 「成套」——不用太大，别喧宾夺主。出现/收起的掉落动画交给 GSAP（main.ts 里
- * 的 syncThemeTagline），这里不写 transform/opacity 的静态值和 transition，
- * 免得和 gsap 的 inline style 打架。
- */
-#theme-tagline {
-  position: absolute;
-  left: 50%;
-  top: 4%;
-  z-index: 8;
-  width: 15%;
-  min-width: 140px;
-  max-width: 220px;
-  height: auto;
-  pointer-events: none;
-  user-select: none;
-  filter: drop-shadow(0 2px 10px var(--color-cut-shadow));
-}
-
 /* ── 快门闪白 ───────────────────────────────────────────────── */
 #flash {
   position: absolute;

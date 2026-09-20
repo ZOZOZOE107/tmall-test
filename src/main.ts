@@ -299,7 +299,6 @@ async function loadLook(themeId: string, lookId: string) {
   ;(window as unknown as { __mesh: MeshGarment | null }).__mesh = meshTop
   ;(window as unknown as { __meshBottom: MeshGarment | null }).__meshBottom = meshBottom
   syncTrash()
-  syncThemeTagline()
   console.info('[wardrobe] 已加载', themeId, lookId, meshAll().map((g) => g.cfg.id))
 }
 
@@ -616,7 +615,7 @@ function tickCountdown(now: number) {
   }
 }
 
-/** 右上/左上品牌角标、右下角小 logo——数值原样抄 app.css 里 .corner-title / #corner-logo 那几行，改了记得两边一起改 */
+/** 左上品牌角标、上方活动标题、右下角小 logo——位置与 app.css 保持一致 */
 const brandBadgeEl = document.getElementById('brand-badge') as HTMLImageElement
 const campaignTitleEl = document.getElementById('campaign-title') as HTMLImageElement
 /** corner-logo 是内联 SVG，眨眼/描边动画只存在于 DOM 里，canvas 画不出动画中间态——
@@ -631,14 +630,9 @@ function drawCornerBranding(g: CanvasRenderingContext2D, w: number, h: number) {
     g.drawImage(brandBadgeEl, w * 0.025, h * 0.03, bw, bh)
   }
   if (campaignTitleEl.complete && campaignTitleEl.naturalWidth) {
-    // CSS 里这张图有个 scale(1.3) transform-origin:top right，右上角是不动点
-    const baseW = Math.min(190, w * 0.12)
-    const baseH = baseW * (campaignTitleEl.naturalHeight / campaignTitleEl.naturalWidth)
-    const anchorX = w - w * 0.02
-    const topY = h * 0.03
-    const sw = baseW * 1.3
-    const sh = baseH * 1.3
-    g.drawImage(campaignTitleEl, anchorX - sw, topY, sw, sh)
+    const titleW = Math.min(220, Math.max(140, w * 0.15))
+    const titleH = titleW * (campaignTitleEl.naturalHeight / campaignTitleEl.naturalWidth)
+    g.drawImage(campaignTitleEl, (w - titleW) / 2, h * 0.04, titleW, titleH)
   }
   if (cornerLogoImg.complete && cornerLogoImg.naturalWidth) {
     const lw = Math.min(44, Math.max(28, w * 0.06))
@@ -1184,8 +1178,6 @@ function takeOff(piece: FolderPiece) {
   ;(window as unknown as { __meshBottom: MeshGarment | null }).__meshBottom = meshBottom
 
   syncTrash()
-  // 脱衣服不用等飞行动画，人一摘下来就该收
-  syncThemeTagline()
   console.info('[wardrobe] 脱下', piece.cfg.id)
 }
 
@@ -1307,7 +1299,6 @@ async function wearFit(
   if (!from) {
     // 没给起点（比如开局加载）就直接穿上，不放飞行动画，胶带也就当场贴好
     tapeFrom.set(next, performance.now())
-    syncThemeTagline()
     return
   }
 
@@ -1374,57 +1365,12 @@ palmArmHint.textContent = '举掌稳住'
 propsEl.append(palmArmHint)
 
 /**
- * 主题赛道词语：上衣和下装凑成同一个主题的整套时才出现，图来自 Figma 导出的
- * 主题 SVG（psd/SVG 目录），一个主题一张，src 换着来。
- */
-const THEME_TAGLINE_SRC: Record<string, string> = {
-  intellect: '/assets/tagline-intellect.svg',
-  editor: '/assets/tagline-editor.svg',
-  homebody: '/assets/tagline-homebody.svg',
-  outdoor: '/assets/tagline-outdoor.svg',
-}
-const themeTagline = document.createElement('img')
-themeTagline.id = 'theme-tagline'
-themeTagline.alt = ''
-propsEl.append(themeTagline)
-
-/** 掉落动画的起点：从这么多像素高的上方落下来，收起时原路跳回去 */
-const TAGLINE_DROP_PX = 40
-gsap.set(themeTagline, { xPercent: -50, scale: 0.8, y: -TAGLINE_DROP_PX, opacity: 0 })
-let taglineOn = false
-
-/** 上衣下装凑成同一个主题整套时才亮出对应的赛道词语，混搭或缺一件就收起 */
-function syncThemeTagline() {
-  const topTheme = meshTop?.cfg.id.split('-look')[0]
-  const bottomTheme = meshBottom?.cfg.id.split('-look')[0]
-  const src = topTheme && topTheme === bottomTheme ? THEME_TAGLINE_SRC[topTheme] : undefined
-  if (!src) {
-    if (taglineOn) {
-      taglineOn = false
-      // 离开：原路跳回上面去，快一点，不用弹性
-      gsap.to(themeTagline, { y: -TAGLINE_DROP_PX, opacity: 0, duration: 0.28, ease: 'power2.in', overwrite: true })
-    }
-    return
-  }
-  if (themeTagline.getAttribute('src') !== src) themeTagline.src = src
-  if (!taglineOn) {
-    taglineOn = true
-    // 出现：从上面掉下来，带一点回弹，像真的掉在这儿一样
-    gsap.fromTo(
-      themeTagline,
-      { y: -TAGLINE_DROP_PX, opacity: 0 },
-      { y: 0, opacity: 0.9, duration: 0.5, ease: 'bounce.out', overwrite: true },
-    )
-  }
-}
-
-/**
- * 虚线框贴着赛道词语的实际底边走，不用写死的百分比 —— 换一张比例不同的图，
+ * 虚线框贴着活动标题的实际底边走，不用写死的百分比 —— 换一张比例不同的图，
  * #stage 的高宽比会跟着变，两个固定百分比之间的视觉间距也会跟着跑偏。
  * 用 getBoundingClientRect 量的是变换（scale）之后的真实渲染框，比 offsetHeight 准。
  */
 function syncFrameGuideTop(stageW: number) {
-  const taglineRect = themeTagline.getBoundingClientRect()
+  const taglineRect = campaignTitleEl.getBoundingClientRect()
   const parentRect = propsEl.getBoundingClientRect()
   const gap = stageW * 0.015
   frameGuideEl.style.top = `${taglineRect.bottom - parentRect.top + gap}px`
@@ -1625,8 +1571,6 @@ function stepArriving(now: number, lms: NormalizedLandmark[] | undefined, w: num
       a.mesh.dropCloth()
       // 布放完了，这会儿才贴胶带 —— 飞的过程中贴上去会跟着布一起乱飘
       tapeFrom.set(a.mesh, now)
-      // 赛道词语也要等衣服真的穿好落地，不然衣服还在飞就先亮了
-      syncThemeTagline()
       return false
     }
     return true
@@ -1783,7 +1727,6 @@ async function mountFolders() {
   // loadLook 和 mountFolders 是并发的，谁先完成不一定。loadLook 里那次 syncTrash
   // 可能跑在废纸篓还没建出来的时候，所以这儿要再同步一次
   syncTrash()
-  syncThemeTagline()
   console.info('[wardrobe] 文件夹', folders.length, '个')
 }
 
