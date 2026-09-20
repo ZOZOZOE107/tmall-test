@@ -878,7 +878,7 @@
       "looks": [
         {
           "id": "look1",
-          "fullOverlay": "/garments/outdoor/look1/whole.png",
+          "fullOverlay": "/garments/prepared/cream-cardigan-black-jeans.png",
           "fullOverlayFit": { "widthByShoulders": 3.5, "shoulderX": 0.53, "shoulderY": 0.10 },
           "pieces": {
             "top": "/garments/outdoor/look1/top.png",
