@@ -154,6 +154,8 @@
         },
         {
           "id": "look2",
+          "fullOverlay": "/garments/intellect/look2/whole.png",
+          "fullOverlayFit": { "widthByShoulders": 3.5, "shoulderX": 0.53, "shoulderY": 0.10 },
           "pieces": {
             "top": "/garments/intellect/look2/top.png",
             "bottom": "/garments/intellect/look2/bottom.png",
