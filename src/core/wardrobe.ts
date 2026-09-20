@@ -10,6 +10,8 @@ export interface LookEntry {
   id: string
   /** 一张完整的透明穿搭图，替代分开的上衣和下装。 */
   fullOverlay?: string
+  /** 肩宽倍数与图片内肩点位置，用于整套图贴合锁定的人物。 */
+  fullOverlayFit?: { widthByShoulders: number; shoulderX: number; shoulderY: number }
   pieces: Partial<Record<Slot | 'full', string>>
   fit: Partial<Record<Slot, MeshGarmentConfig & { tuned?: boolean }>>
 }

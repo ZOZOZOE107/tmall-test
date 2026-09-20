@@ -261,6 +261,8 @@
       "looks": [
         {
           "id": "look1",
+          "fullOverlay": "/garments/editor/look1/whole.png",
+          "fullOverlayFit": { "widthByShoulders": 2.25, "shoulderX": 0.53, "shoulderY": 0.19 },
           "pieces": {
             "top": "/garments/editor/look1/top.png",
             "bottom": "/garments/editor/look1/bottom.png",
@@ -1026,6 +1028,8 @@
         },
         {
           "id": "look2",
+          "fullOverlay": "/garments/outdoor/look2/whole.png",
+          "fullOverlayFit": { "widthByShoulders": 4.0, "shoulderX": 0.50, "shoulderY": 0.09 },
           "pieces": {
             "top": "/garments/outdoor/look2/top.png",
             "bottom": "/garments/outdoor/look2/bottom.png",

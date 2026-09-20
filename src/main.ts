@@ -278,7 +278,7 @@ fullLookEl.id = 'full-look'
 fullLookEl.alt = ''
 fullLookEl.style.cssText = 'position:absolute;pointer-events:none;display:none;max-width:none;'
 stageEl.insertBefore(fullLookEl, canvasEl)
-let activeFullLook: { id: string; src: string } | null = null
+let activeFullLook: { id: string; src: string; fit?: { widthByShoulders: number; shoulderX: number; shoulderY: number } } | null = null
 let fullLookRect: { x: number; y: number; w: number; h: number } | null = null
 /** 双手叉腰姿势首次锁定后永久解锁；后续动作变化不再隐藏衣服。 */
 let garmentUnlocked = false
@@ -323,7 +323,7 @@ async function loadLook(themeId: string, lookId: string) {
   meshBottom = nextBottom
   meshTop = nextTop
   activeFullLook = nextFullImage && look.fullOverlay
-    ? { id: `${themeId}-${lookId}-full`, src: look.fullOverlay }
+    ? { id: `${themeId}-${lookId}-full`, src: look.fullOverlay, fit: look.fullOverlayFit }
     : null
   if (look.fullOverlay) fullLookEl.src = look.fullOverlay
   else fullLookEl.removeAttribute('src')
@@ -1441,10 +1441,11 @@ function paintFullLook(lms: NormalizedLandmark[] | null, w: number, h: number) {
     return
   }
   const shoulder = Math.hypot((right.x - left.x) * w, (right.y - left.y) * h)
-  const width = shoulder * 1.9
+  const fit = activeFullLook.fit ?? { widthByShoulders: 1.9, shoulderX: 0.54, shoulderY: 0.04 }
+  const width = shoulder * fit.widthByShoulders
   const height = width * fullLookEl.naturalHeight / fullLookEl.naturalWidth
-  const x = ((left.x + right.x) * w) / 2 - width * 0.54
-  const y = ((left.y + right.y) * h) / 2 - height * 0.04
+  const x = ((left.x + right.x) * w) / 2 - width * fit.shoulderX
+  const y = ((left.y + right.y) * h) / 2 - height * fit.shoulderY
   fullLookRect = { x, y, w: width, h: height }
   Object.assign(fullLookEl.style, { left: `${x}px`, top: `${y}px`, width: `${width}px`, height: `${height}px`, display: 'block' })
 }
