@@ -273,6 +273,13 @@ function makeMeshLayer(id: string): HTMLCanvasElement {
 let meshBottom: MeshGarment | null = null
 let meshTop: MeshGarment | null = null
 let currentLook: { theme: string; look: string } | null = null
+const fullLookEl = document.createElement('img')
+fullLookEl.id = 'full-look'
+fullLookEl.alt = ''
+fullLookEl.style.cssText = 'position:absolute;pointer-events:none;display:none;max-width:none;'
+stageEl.insertBefore(fullLookEl, canvasEl)
+let activeFullLook: { id: string; src: string } | null = null
+let fullLookRect: { x: number; y: number; w: number; h: number } | null = null
 /** 双手叉腰姿势首次锁定后永久解锁；后续动作变化不再隐藏衣服。 */
 let garmentUnlocked = false
 /** 锁定成功那一帧的人体位置；之后衣服和胶带都用这组坐标，不再跟随动作。 */
@@ -288,10 +295,17 @@ async function loadLook(themeId: string, lookId: string) {
   }
   let nextBottom: MeshGarment | null = null
   let nextTop: MeshGarment | null = null
+  let nextFullImage: HTMLImageElement | null = null
   try {
-    if (look.fit.bottom) nextBottom = new MeshGarment(look.fit.bottom, layerBottom)
-    if (look.fit.top) nextTop = new MeshGarment(look.fit.top, layerTop)
-    await Promise.all([nextBottom, nextTop].filter(Boolean).map((g) => g!.load()))
+    if (look.fullOverlay) {
+      nextFullImage = new Image()
+      nextFullImage.src = look.fullOverlay
+      await nextFullImage.decode()
+    } else {
+      if (look.fit.bottom) nextBottom = new MeshGarment(look.fit.bottom, layerBottom)
+      if (look.fit.top) nextTop = new MeshGarment(look.fit.top, layerTop)
+      await Promise.all([nextBottom, nextTop].filter(Boolean).map((g) => g!.load()))
+    }
   } catch (e) {
     nextBottom?.dispose()
     nextTop?.dispose()
@@ -308,6 +322,13 @@ async function loadLook(themeId: string, lookId: string) {
   }
   meshBottom = nextBottom
   meshTop = nextTop
+  activeFullLook = nextFullImage && look.fullOverlay
+    ? { id: `${themeId}-${lookId}-full`, src: look.fullOverlay }
+    : null
+  if (look.fullOverlay) fullLookEl.src = look.fullOverlay
+  else fullLookEl.removeAttribute('src')
+  fullLookEl.style.display = 'none'
+  fullLookRect = null
   currentLook = { theme: themeId, look: lookId }
   // 开局这套本来就穿在身上，胶带当场贴好，和后面换上来的保持一致
   for (const g of meshAll()) tapeFrom.set(g, performance.now())
@@ -677,7 +698,14 @@ async function snapshot(w: number, h: number) {
   try {
     const background = ui.segmentation.checked && !segmentationEl.hidden ? segmentationEl : src.el
     g.drawImage(background as CanvasImageSource, 0, 0, c.width, c.height)
-    for (const layer of [layerBottom, layerTop, layerTape, layerCloudRain]) {
+    for (const layer of [layerBottom, layerTop]) {
+      g.drawImage(layer, 0, 0, c.width, c.height)
+    }
+    if (activeFullLook && fullLookRect && fullLookEl.complete) {
+      const r = fullLookRect
+      g.drawImage(fullLookEl, r.x, r.y, r.w, r.h)
+    }
+    for (const layer of [layerTape, layerCloudRain]) {
       g.drawImage(layer, 0, 0, c.width, c.height)
     }
     // 桌面图标/品牌角标本来就是「观众视角」坐标（#props 的 CSS 反向 transform 已经
@@ -1147,6 +1175,7 @@ const stockShown = new Map<string, string>()
 
 function syncStock() {
   const worn = new Set([meshTop?.cfg.id, meshBottom?.cfg.id].filter(Boolean) as string[])
+  if (activeFullLook) worn.add(activeFullLook.id)
   for (const [id, all] of stock) {
     const folder = folders.find((f) => f.id === id)
     if (!folder) continue
@@ -1166,10 +1195,18 @@ function syncTrash() {
   const worn: FolderPiece[] = []
   if (meshTop) worn.push({ id: meshTop.cfg.id, src: meshTop.cfg.src, slot: 'top', cfg: meshTop.cfg })
   if (meshBottom) worn.push({ id: meshBottom.cfg.id, src: meshBottom.cfg.src, slot: 'bottom', cfg: meshBottom.cfg })
+  if (activeFullLook && currentLook) worn.push({ id: activeFullLook.id, src: activeFullLook.src, look: { theme: currentLook.theme, id: currentLook.look } })
   trash.setPieces(worn)
 }
 
 function takeOff(piece: FolderPiece) {
+  if (piece.look && activeFullLook?.id === piece.id) {
+    activeFullLook = null
+    fullLookEl.style.display = 'none'
+    fullLookRect = null
+    syncTrash()
+    return
+  }
   if (!piece.slot || !piece.cfg) return
   const slot = piece.slot
   const mesh = slot === 'top' ? meshTop : meshBottom
@@ -1300,6 +1337,9 @@ async function wearFit(
     console.warn('[wardrobe] 换装失败', cfg.id, e)
     return
   }
+  activeFullLook = null
+  fullLookEl.style.display = 'none'
+  fullLookRect = null
   // 同一个 canvas 上的旧那套 GL 资源要还回去，否则每换一次就攒一张贴图
   prev?.clear(stage.content.w, stage.content.h, 1)
   prev?.dispose()
@@ -1389,6 +1429,24 @@ function syncFrameGuideTop(stageW: number) {
   const parentRect = propsEl.getBoundingClientRect()
   const gap = stageW * 0.015
   frameGuideEl.style.top = `${taglineRect.bottom - parentRect.top + gap}px`
+}
+
+/** 整套图以锁定时的两肩为参照，一次摆好后始终停在画面同一位置。 */
+function paintFullLook(lms: NormalizedLandmark[] | null, w: number, h: number) {
+  const left = lms?.[11]
+  const right = lms?.[12]
+  if (!activeFullLook || !garmentUnlocked || !showGarment || !left || !right || !fullLookEl.naturalWidth) {
+    fullLookEl.style.display = 'none'
+    fullLookRect = null
+    return
+  }
+  const shoulder = Math.hypot((right.x - left.x) * w, (right.y - left.y) * h)
+  const width = shoulder * 1.9
+  const height = width * fullLookEl.naturalHeight / fullLookEl.naturalWidth
+  const x = ((left.x + right.x) * w) / 2 - width * 0.54
+  const y = ((left.y + right.y) * h) / 2 - height * 0.04
+  fullLookRect = { x, y, w: width, h: height }
+  Object.assign(fullLookEl.style, { left: `${x}px`, top: `${y}px`, width: `${width}px`, height: `${height}px`, display: 'block' })
 }
 
 let palmRingOn = false
@@ -1616,7 +1674,12 @@ async function mountFolders() {
     }
     const pieces: FolderPiece[] = []
     for (const [slot, lookId] of order) {
-      const cfg = theme.looks.find((l) => l.id === lookId)?.fit?.[slot]
+      const look = theme.looks.find((l) => l.id === lookId)
+      if (look?.fullOverlay) {
+        if (slot === 'top') pieces.push({ id: `${theme.id}-${lookId}-full`, src: look.fullOverlay, look: { theme: theme.id, id: lookId } })
+        continue
+      }
+      const cfg = look?.fit?.[slot]
       if (cfg) pieces.push({ id: cfg.id, slot, src: cfg.src, cfg })
     }
     if (!pieces.length) continue
@@ -1643,6 +1706,10 @@ async function mountFolders() {
         onWear: (p, from) => {
           // 姿势锁定是换装入口；锁定前不启动衣服飞入动画。
           if (!garmentUnlocked) return
+          if (p.look) {
+            void loadLook(p.look.theme, p.look.id)
+            return
+          }
           if (p.slot && p.cfg) void wearFit(p.slot, p.cfg, from)
         },
       }),
@@ -2209,6 +2276,7 @@ function loop() {
   paintStandGuide(lastStand)
   const tSec = performance.now() / 1000
   const garmentLms = lockedGarmentLandmarks
+  paintFullLook(garmentLms, w, h)
 
   // 正在从文件夹飘过来的衣服自己走布料 + 渐变贴合，这一帧已经画过了，
   // 下面按蒙皮再画一遍会把布覆盖掉

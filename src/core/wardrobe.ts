@@ -8,6 +8,8 @@ export type Slot = 'top' | 'bottom' | 'inner'
 
 export interface LookEntry {
   id: string
+  /** 一张完整的透明穿搭图，替代分开的上衣和下装。 */
+  fullOverlay?: string
   pieces: Partial<Record<Slot | 'full', string>>
   fit: Partial<Record<Slot, MeshGarmentConfig & { tuned?: boolean }>>
 }

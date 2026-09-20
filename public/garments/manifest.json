@@ -11,6 +11,7 @@
       "looks": [
         {
           "id": "look1",
+          "fullOverlay": "/garments/intellect/look1/whole.png",
           "pieces": {
             "top": "/garments/intellect/look1/top.png",
             "bottom": "/garments/intellect/look1/bottom.png",

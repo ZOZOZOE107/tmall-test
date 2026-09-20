@@ -200,6 +200,8 @@ export interface FolderPiece {
   /** 衣服才有。照片没有，所以是可选的 */
   slot?: PieceSlot
   cfg?: MeshGarmentConfig
+  /** 整套透明图通过 look 选择，不走单件网格。 */
+  look?: { theme: string; id: string }
 }
 
 /** 扇形里每张卡的位置，单位是「文件夹图标边长」的倍数，原点在图标中心 */
