@@ -275,6 +275,8 @@ let meshTop: MeshGarment | null = null
 let currentLook: { theme: string; look: string } | null = null
 /** 双手叉腰姿势首次锁定后永久解锁；后续动作变化不再隐藏衣服。 */
 let garmentUnlocked = false
+/** 锁定成功那一帧的人体位置；之后衣服和胶带都用这组坐标，不再跟随动作。 */
+let lockedGarmentLandmarks: NormalizedLandmark[] | null = null
 
 /** 从 manifest 建两件。参数全部来自 JSON，代码里不留任何数值 */
 async function loadLook(themeId: string, lookId: string) {
@@ -384,7 +386,7 @@ const exposeLms = (v: unknown) => {
 
 /** 骨骼点是源图坐标系的，镜像时横着翻一下再给文件夹算落点 */
 const propsLandmarks = () => {
-  const lms = lastResult?.landmarks?.[0]
+  const lms = lockedGarmentLandmarks ?? lastResult?.landmarks?.[0]
   if (!lms) return null
   const out = stage.mirrored ? lms.map((p) => ({ ...p, x: 1 - p.x })) : lms
   exposeLms(out)
@@ -1846,6 +1848,9 @@ const trim = (s: string, n: number) => (s.length > n ? `${s.slice(0, n)}…` : s
 sources.onChange = (src) => {
   lastResult = null
   lastVideoTime = -1
+  garmentUnlocked = false
+  lockedGarmentLandmarks = null
+  standGuide.reset()
 
   // 摄像头默认镜像（照镜子的手感），本地视频/图片/屏幕捕获不镜像。
   // 手动改过就以手动的为准，不再被切换来源覆盖。
@@ -2157,9 +2162,8 @@ function loop() {
       // 显示用原图，推理用缩小图。关键点是归一化坐标，贴合精度不受影响
       const input = forInference(v, Number(ui.inferRes.value))
 
-      // 检测和显示是两件事：UI 勾选框只管画不画骨骼线，衣服也要靠骨骼点，
-      // 所以只要还在穿衣服就得继续检测。两者都关掉才真的停下来省算力。
-      if (ui.pose.checked || showGarment) {
+      // 锁定之前持续检测姿势；锁定后衣服使用固定骨骼点，只有需要骨骼调试时继续检测。
+      if (ui.pose.checked || !garmentUnlocked) {
         lastResult = pose.detectVideo(input, performance.now())
       }
 
@@ -2198,19 +2202,23 @@ function loop() {
     mirrored: stage.mirrored,
   })
   guideClock = guideNow
-  if (lastStand.state === 'ready') garmentUnlocked = true
+  if (lastStand.state === 'ready' && !lockedGarmentLandmarks && lms) {
+    lockedGarmentLandmarks = lms.map((point) => ({ ...point }))
+    garmentUnlocked = true
+  }
   paintStandGuide(lastStand)
   const tSec = performance.now() / 1000
+  const garmentLms = lockedGarmentLandmarks
 
   // 正在从文件夹飘过来的衣服自己走布料 + 渐变贴合，这一帧已经画过了，
   // 下面按蒙皮再画一遍会把布覆盖掉
   // 首次姿势锁定前，任何衣服（包括飞入/脱下动画）都保持不可见。
-  const flying = garmentUnlocked ? stepArriving(performance.now(), lms, w, h, dpr) : new Set<MeshGarment>()
+  const flying = garmentUnlocked ? stepArriving(performance.now(), garmentLms ?? undefined, w, h, dpr) : new Set<MeshGarment>()
 
   for (const g of meshAll()) {
     if (flying.has(g)) continue
-    if (showGarment && garmentUnlocked && garmentMode === 'mesh' && g.ready && lms) {
-      if (g.fit(lms, w, h, Number(ui.vis.value), tSec)) g.render(w, h, dpr)
+    if (showGarment && garmentUnlocked && garmentMode === 'mesh' && g.ready && garmentLms) {
+      if (g.fit(garmentLms, w, h, Number(ui.vis.value), tSec)) g.render(w, h, dpr)
       else g.clear(w, h, dpr)
     } else {
       g.clear(w, h, dpr)
@@ -2221,7 +2229,7 @@ function loop() {
   if (garmentUnlocked) stepFalling(performance.now(), w, h, dpr)
 
   // 胶带压在衣服之上，所以排在衣服全部画完之后
-  drawTapes(performance.now(), w, h, lms)
+  drawTapes(performance.now(), w, h, garmentLms ?? undefined)
 
   // 抓拍必须卡在这个位置：衣服刚画完、骨骼线还没画上去。
   // 而且 WebGL 画布合成完就被清空了（没开 preserveDrawingBuffer），
@@ -2241,8 +2249,8 @@ function loop() {
     )
   }
 
-  if (showGarment && garmentUnlocked && garmentMode === 'rigid' && garment.ready && lms) {
-    const fit = garment.fit(lms, w, h, Number(ui.vis.value), tSec)
+  if (showGarment && garmentUnlocked && garmentMode === 'rigid' && garment.ready && garmentLms) {
+    const fit = garment.fit(garmentLms, w, h, Number(ui.vis.value), tSec)
     if (fit) {
       garment.draw(ctx, fit)
       if (showAnchors) garment.drawAnchors(ctx, fit)
